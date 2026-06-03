@@ -263,17 +263,20 @@ function Dashboard() {
         query: { page: 1, pageSize: 5000, sigFrom: from, sigTo: to },
       }).then((r) => r.contracts ?? []);
       const prospectById = new Map<string, SourceProspect>(prospects.map((p) => [p.id, p]));
-      const missingIds = Array.from(new Set(
+      const neededProspectIds = Array.from(new Set(
         monthContracts
           .map((c) => c.prospectId)
-          .filter((id): id is string => !!id && !prospectById.has(id)),
+          .filter((id): id is string => !!id),
       ));
-      const fetchedProspects = await Promise.all(
-        missingIds.map((id) => api<{ prospect: SourceProspect }>("/prospects.php", { query: { id } })
-          .then((r) => r.prospect)
-          .catch(() => null)),
-      );
-      fetchedProspects.forEach((p) => { if (p) prospectById.set(p.id, p); });
+      let missingIds = neededProspectIds.filter((id) => !prospectById.has(id));
+      for (let page = 1, total = Number.POSITIVE_INFINITY; missingIds.length && (page - 1) * 5000 < total && page <= 10; page += 1) {
+        const batch = await api<{ prospects: SourceProspect[]; total?: number }>("/prospects.php", {
+          query: { page, pageSize: 5000 },
+        });
+        total = batch.total ?? total;
+        (batch.prospects ?? []).forEach((p) => prospectById.set(p.id, p));
+        missingIds = missingIds.filter((id) => !prospectById.has(id));
+      }
 
       const map = new Map<string, number>();
       monthContracts
