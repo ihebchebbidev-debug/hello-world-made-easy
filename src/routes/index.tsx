@@ -233,9 +233,12 @@ function Dashboard() {
 
 
   // Sources breakdown — driven by the month selector in the chart widget.
-  // Use the backend aggregate as the single source of truth so first paint
-  // cannot be polluted by the partial 2000-row dashboard cache.
+  // Fetch the exact signed contracts for the month, then fetch each linked
+  // prospect by id. This mirrors the fully-hydrated month-switch result on
+  // first dashboard open and avoids the partial global dashboard cache.
   type SourceBreakdownRow = { source: string; contrats: number };
+  type SourceChartContract = { prospectId?: string | null; source?: string | null; billingStatus?: string | null };
+  type SourceChartProspect = { id: string; source?: string | null };
   const [monthSourceBreakdown, setMonthSourceBreakdown] = useState<SourceBreakdownRow[] | null>(null);
   const [sourceBreakdownLoading, setSourceBreakdownLoading] = useState(API_ENABLED);
   useEffect(() => {
@@ -249,11 +252,42 @@ function Dashboard() {
     setSourceBreakdownLoading(true);
     setMonthSourceBreakdown(null);
     const loadSourceBreakdown = async (): Promise<SourceBreakdownRow[]> => {
-      const aggregated = await api<{ sources?: SourceBreakdownRow[] }>("/dashboard.php", {
-        query: { breakdown: "sources", from, to },
-      });
-      return (aggregated.sources ?? [])
-        .map((row) => ({ source: normalizeSource(row.source), contrats: row.contrats }))
+      const pageSize = 5000;
+      const monthContracts: SourceChartContract[] = [];
+      for (let page = 1, total = Number.POSITIVE_INFINITY; (page - 1) * pageSize < total && page <= 20; page += 1) {
+        const batch = await api<{ contracts: SourceChartContract[]; total?: number }>("/contracts.php", {
+          query: { page, pageSize, sigFrom: from, sigTo: to },
+        });
+        monthContracts.push(...(batch.contracts ?? []));
+        total = batch.total ?? monthContracts.length;
+        if ((batch.contracts ?? []).length < pageSize) break;
+      }
+
+      const prospectIds = Array.from(new Set(
+        monthContracts.map((contract) => contract.prospectId).filter((id): id is string => Boolean(id)),
+      ));
+      const prospectById = new Map<string, SourceChartProspect>();
+      for (let i = 0; i < prospectIds.length; i += 12) {
+        const chunk = prospectIds.slice(i, i + 12);
+        const rows = await Promise.all(
+          chunk.map((id) => api<{ prospect: SourceChartProspect }>("/prospects.php", { query: { id } })
+            .then((response) => response.prospect)
+            .catch(() => null)),
+        );
+        rows.forEach((prospect) => { if (prospect) prospectById.set(prospect.id, prospect); });
+      }
+
+      const counts = new Map<string, number>();
+      monthContracts
+        .filter((contract) => contract.billingStatus !== "Annuler la confirmation")
+        .forEach((contract) => {
+          const linkedProspect = contract.prospectId ? prospectById.get(contract.prospectId) : undefined;
+          const source = normalizeSource(linkedProspect?.source || contract.source);
+          counts.set(source, (counts.get(source) ?? 0) + 1);
+        });
+
+      return Array.from(counts.entries())
+        .map(([source, contrats]) => ({ source, contrats }))
         .sort((a, b) => b.contrats - a.contrats);
     };
 
