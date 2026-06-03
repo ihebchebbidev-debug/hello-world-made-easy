@@ -33,6 +33,11 @@ export const Route = createFileRoute("/")({
 
 const COLORS = ["oklch(0.68 0.17 55)", "oklch(0.8 0.14 75)", "oklch(0.65 0.16 155)", "oklch(0.78 0.15 75)", "oklch(0.6 0.22 320)"];
 
+const normalizeSource = (value?: string | null) => {
+  const source = (value ?? "").trim().replace(/\s+/g, " ");
+  return source ? source.toUpperCase() : "AUTRE";
+};
+
 type StatTone = "indigo" | "emerald" | "amber" | "rose";
 
 const STAT_TONES: Record<StatTone, { gradient: string; ring: string; sparkStroke: string; sparkFill: string }> = {
@@ -228,11 +233,11 @@ function Dashboard() {
 
 
   // Sources breakdown — driven by the month selector in the chart widget.
-  // Fetch contracts for the selected month directly from the server so the
-  // breakdown is never capped by the 2000-row client cache (which can hide
-  // sources on first paint while the cache is still warming up).
-  type ChartContract = { prospectId?: string | null; source?: string | null; billingStatus?: string | null };
-  const [monthContractsForChart, setMonthContractsForChart] = useState<ChartContract[] | null>(null);
+  // The backend aggregates sources with a prospect join so first paint matches
+  // the fully-hydrated result after switching months.
+  type SourceBreakdownRow = { source: string; contrats: number };
+  const [monthSourceBreakdown, setMonthSourceBreakdown] = useState<SourceBreakdownRow[] | null>(null);
+  const [sourceBreakdownLoading, setSourceBreakdownLoading] = useState(API_ENABLED);
   useEffect(() => {
     if (!API_ENABLED) return;
     let cancelled = false;
@@ -241,23 +246,22 @@ function Dashboard() {
     const [y, m] = chartMonth.split("-").map(Number);
     const last = new Date(y, m, 0).getDate();
     const to = `${chartMonth}-${String(last).padStart(2, "0")}`;
-    setMonthContractsForChart(null);
-    api<{ contracts: any[] }>("/contracts.php", {
-      query: { page: 1, pageSize: 5000, sigFrom: from, sigTo: to },
+    setSourceBreakdownLoading(true);
+    setMonthSourceBreakdown(null);
+    api<{ sources: SourceBreakdownRow[] }>("/dashboard.php", {
+      query: { breakdown: "sources", from, to },
     })
-      .then((r) => { if (!cancelled) setMonthContractsForChart(r.contracts ?? []); })
-      .catch(() => { if (!cancelled) setMonthContractsForChart([]); });
+      .then((r) => { if (!cancelled) setMonthSourceBreakdown(r.sources ?? []); })
+      .catch(() => { if (!cancelled) setMonthSourceBreakdown(null); })
+      .finally(() => { if (!cancelled) setSourceBreakdownLoading(false); });
     return () => { cancelled = true; };
-  }, [chartMonth]);
+  }, [chartMonth, refreshTick]);
 
-  const sourceBreakdown = useMemo(() => {
+  const fallbackSourceBreakdown = useMemo(() => {
     const prospectById = new Map(prospects.map((p) => [p.id, p]));
     const map = new Map<string, number>();
-    // Prefer the server-fetched month slice; fall back to the local cache
-    // while the request is in flight so the widget is never empty.
-    const src = monthContractsForChart
-      ?? contracts.filter((c) => (c.signatureDate ?? "").startsWith(chartMonth));
-    src
+    contracts
+      .filter((c) => (c.signatureDate ?? "").startsWith(chartMonth))
       // Exclude cancelled contracts so the breakdown only counts real
       // contracts (consistent with KPIs + backend rdv_agents.php).
       .filter((c) => c.billingStatus !== "Annuler la confirmation")
@@ -265,19 +269,19 @@ function Dashboard() {
         // Source of truth: linked prospect's source (current value),
         // fallback to the contract's stored source, else "Autre".
         const linked = c.prospectId ? prospectById.get(c.prospectId) : undefined;
-        const raw = (linked?.source || c.source || "").trim();
-        // Canonicalize so "RDV CHAUD" / "rdv chaud" / "Rdv  Chaud"
-        // don't split into multiple slices.
-        const normalized = raw
-          ? raw.replace(/\s+/g, " ").toUpperCase()
-          : "AUTRE";
+        const normalized = normalizeSource(linked?.source || c.source);
         map.set(normalized, (map.get(normalized) ?? 0) + 1);
       });
     return Array.from(map.entries())
       .map(([source, contrats]) => ({ source, contrats }))
       .sort((a, b) => b.contrats - a.contrats);
     // No slice — show 100% of sources that produced a contract this month.
-  }, [contracts, prospects, chartMonth, monthContractsForChart]);
+  }, [contracts, prospects, chartMonth]);
+
+  const sourceBreakdown = useMemo(
+    () => monthSourceBreakdown ?? (sourceBreakdownLoading ? [] : fallbackSourceBreakdown),
+    [fallbackSourceBreakdown, monthSourceBreakdown, sourceBreakdownLoading],
+  );
 
 
 
