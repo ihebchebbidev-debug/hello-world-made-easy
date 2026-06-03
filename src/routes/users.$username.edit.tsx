@@ -35,6 +35,7 @@ function EditUserPage() {
   const u = useMemo(() => users.find((x) => x.username === username), [users, username]);
 
   const [saving, setSaving] = useState(false);
+  const [usernameInput, setUsernameInput] = useState("");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<(typeof ROLES)[number]>("Agent");
@@ -43,7 +44,7 @@ function EditUserPage() {
 
   useEffect(() => {
     if (!u) return;
-    setFullName(u.fullName); setEmail(u.email); setActive(u.active);
+    setUsernameInput(u.username); setFullName(u.fullName); setEmail(u.email); setActive(u.active);
     // Normalize role: match case-insensitively against ROLES, fallback to "Agent"
     const raw = String(u.role ?? "").trim();
     const match = ROLES.find((r) => r.toLowerCase() === raw.toLowerCase());
@@ -66,16 +67,25 @@ function EditUserPage() {
   }
 
   const submit = async () => {
+    const nextUsername = usernameInput.trim();
+    if (!nextUsername) { toast.error("Nom d'utilisateur requis"); return; }
     if (!fullName.trim()) { toast.error("Nom complet requis"); return; }
     if (!role || !ROLES.includes(role)) { toast.error("Rôle requis"); return; }
     if (memberGroups.length === 0) { toast.error("Au moins un groupe est requis"); return; }
+
+    const collision = users.find((x) => x.username.toLowerCase() === nextUsername.toLowerCase() && x.id !== u.id);
+    if (collision) {
+      toast.error("Ce nom d'utilisateur est déjà utilisé");
+      return;
+    }
+
     setSaving(true);
     try {
       const primary = memberGroups[0];
-      await saveUser({ id: u.id, username: u.username, fullName: fullName.trim(), email: email.trim(), role, team: primary, active });
+      await saveUser({ id: u.id, username: nextUsername, fullName: fullName.trim(), email: email.trim(), role, team: primary, active });
       await saveUserGroups(u.id, memberGroups);
       toast.success("Utilisateur mis à jour");
-      navigate({ to: "/users/$username", params: { username: u.username } });
+      navigate({ to: "/users/$username", params: { username: nextUsername } });
     } catch (e: any) {
       toast.error(e?.message ?? "Erreur lors de la mise à jour");
     } finally { setSaving(false); }
@@ -100,6 +110,7 @@ function EditUserPage() {
         <Card>
           <CardHeader className="pb-3"><CardTitle className="text-base">Profil</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5 sm:col-span-2"><Label>Nom d'utilisateur *</Label><Input value={usernameInput} onChange={(e) => setUsernameInput(e.target.value)} placeholder="marie.dupont" /></div>
             <div className="space-y-1.5 sm:col-span-2"><Label>Nom complet *</Label><Input value={fullName} onChange={(e) => setFullName(e.target.value)} /></div>
             <div className="space-y-1.5 sm:col-span-2"><Label>Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Rôle</Label>

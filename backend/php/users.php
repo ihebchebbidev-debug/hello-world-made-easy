@@ -67,13 +67,26 @@ if ($method === 'POST') {
         if ($active === null) $active = true;
         $active = $active ? 1 : 0;
 
-        $exists = $db->prepare('SELECT id FROM extraneterp_users WHERE username = :u');
-        $exists->execute([':u' => $username]);
-        $existingId = $exists->fetchColumn();
+        $existingId = null;
+        if (!empty($r['id'])) {
+            $check = $db->prepare('SELECT id FROM extraneterp_users WHERE id = :id LIMIT 1');
+            $check->execute([':id' => $r['id']]);
+            $existingId = $check->fetchColumn();
+        }
+
+        if (!$existingId) {
+            $exists = $db->prepare('SELECT id FROM extraneterp_users WHERE username = :u LIMIT 1');
+            $exists->execute([':u' => $username]);
+            $existingId = $exists->fetchColumn();
+        }
 
         if ($existingId) {
-            $u = $db->prepare('UPDATE extraneterp_users SET full_name=:fn, email=:em, role=:r, team=:t, active=:a WHERE id=:id');
-            $u->execute([':fn'=>$fullName, ':em'=>$email, ':r'=>$role, ':t'=>$team, ':a'=>$active, ':id'=>$existingId]);
+            $conflict = $db->prepare('SELECT id FROM extraneterp_users WHERE username = :u AND id != :id LIMIT 1');
+            $conflict->execute([':u' => $username, ':id' => $existingId]);
+            if ($conflict->fetchColumn()) { $skipped++; continue; }
+
+            $u = $db->prepare('UPDATE extraneterp_users SET username=:u, full_name=:fn, email=:em, role=:r, team=:t, active=:a WHERE id=:id');
+            $u->execute([':u'=>$username, ':fn'=>$fullName, ':em'=>$email, ':r'=>$role, ':t'=>$team, ':a'=>$active, ':id'=>$existingId]);
             $updated++;
         } else {
             $id = $r['id'] ?? ('U-' . substr(bin2hex(random_bytes(6)), 0, 8));

@@ -308,7 +308,7 @@ export function ErpProvider({ children }: { children: ReactNode }) {
       return;
     }
     setImportedUsers((prev) => {
-      const exists = prev.findIndex((x) => x.username === u.username);
+      const exists = prev.findIndex((x) => (u.id && x.id === u.id) || x.username === u.username);
       const next: AppUser = {
         id: u.id ?? `U-${Date.now()}`,
         username: u.username ?? "",
