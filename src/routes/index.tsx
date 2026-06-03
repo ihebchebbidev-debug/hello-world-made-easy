@@ -120,7 +120,7 @@ const Stat = memo(function Stat({ label, value, sub, icon, trend, trendDir, tone
 });
 
 function Dashboard() {
-  const { contracts, users, prospects, refresh } = useErp();
+  const { contracts, users, prospects, refresh, hydrated } = useErp();
   const { user } = useAuth();
   const dashboardStats = useDashboardStats();
   const currency = useCurrency();
@@ -257,6 +257,7 @@ function Dashboard() {
         });
         if (Array.isArray(aggregated.sources)) return aggregated.sources;
       } catch { /* fall back to existing endpoints */ }
+      if (!hydrated) throw new Error("WAIT_FOR_STORE_HYDRATION");
 
       const monthContracts = await api<{ contracts: ChartContract[] }>("/contracts.php", {
         query: { page: 1, pageSize: 5000, sigFrom: from, sigTo: to },
@@ -292,7 +293,7 @@ function Dashboard() {
       .catch(() => { if (!cancelled) setMonthSourceBreakdown(null); })
       .finally(() => { if (!cancelled) setSourceBreakdownLoading(false); });
     return () => { cancelled = true; };
-  }, [chartMonth, refreshTick, prospects]);
+  }, [chartMonth, refreshTick, prospects, hydrated]);
 
   const fallbackSourceBreakdown = useMemo(() => {
     const prospectById = new Map(prospects.map((p) => [p.id, p]));
@@ -315,9 +316,10 @@ function Dashboard() {
     // No slice — show 100% of sources that produced a contract this month.
   }, [contracts, prospects, chartMonth]);
 
+  const sourceBreakdownPending = sourceBreakdownLoading || (!hydrated && monthSourceBreakdown === null);
   const sourceBreakdown = useMemo(
-    () => monthSourceBreakdown ?? (sourceBreakdownLoading ? [] : fallbackSourceBreakdown),
-    [fallbackSourceBreakdown, monthSourceBreakdown, sourceBreakdownLoading],
+    () => monthSourceBreakdown ?? (sourceBreakdownPending ? [] : fallbackSourceBreakdown),
+    [fallbackSourceBreakdown, monthSourceBreakdown, sourceBreakdownPending],
   );
 
 
