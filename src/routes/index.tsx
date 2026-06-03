@@ -120,7 +120,7 @@ const Stat = memo(function Stat({ label, value, sub, icon, trend, trendDir, tone
 });
 
 function Dashboard() {
-  const { contracts, users, prospects, refresh, hydrated } = useErp();
+  const { contracts, users, prospects, refresh } = useErp();
   const { user } = useAuth();
   const dashboardStats = useDashboardStats();
   const currency = useCurrency();
@@ -233,11 +233,9 @@ function Dashboard() {
 
 
   // Sources breakdown — driven by the month selector in the chart widget.
-  // The backend aggregates sources with a prospect join so first paint matches
-  // the fully-hydrated result after switching months.
+  // Use the backend aggregate as the single source of truth so first paint
+  // cannot be polluted by the partial 2000-row dashboard cache.
   type SourceBreakdownRow = { source: string; contrats: number };
-  type ChartContract = { prospectId?: string | null; source?: string | null; billingStatus?: string | null; signatureDate?: string | null };
-  type SourceProspect = { id: string; source?: string | null };
   const [monthSourceBreakdown, setMonthSourceBreakdown] = useState<SourceBreakdownRow[] | null>(null);
   const [sourceBreakdownLoading, setSourceBreakdownLoading] = useState(API_ENABLED);
   useEffect(() => {
@@ -251,43 +249,11 @@ function Dashboard() {
     setSourceBreakdownLoading(true);
     setMonthSourceBreakdown(null);
     const loadSourceBreakdown = async (): Promise<SourceBreakdownRow[]> => {
-      try {
-        const aggregated = await api<{ sources?: SourceBreakdownRow[] }>("/dashboard.php", {
-          query: { breakdown: "sources", from, to },
-        });
-        if (Array.isArray(aggregated.sources)) return aggregated.sources;
-      } catch { /* fall back to existing endpoints */ }
-      if (!hydrated) throw new Error("WAIT_FOR_STORE_HYDRATION");
-
-      const monthContracts = await api<{ contracts: ChartContract[] }>("/contracts.php", {
-        query: { page: 1, pageSize: 5000, sigFrom: from, sigTo: to },
-      }).then((r) => r.contracts ?? []);
-      const prospectById = new Map<string, SourceProspect>(prospects.map((p) => [p.id, p]));
-      const neededProspectIds = Array.from(new Set(
-        monthContracts
-          .map((c) => c.prospectId)
-          .filter((id): id is string => !!id),
-      ));
-      let missingIds = neededProspectIds.filter((id) => !prospectById.has(id));
-      for (let page = 1, total = Number.POSITIVE_INFINITY; missingIds.length && (page - 1) * 5000 < total && page <= 10; page += 1) {
-        const batch = await api<{ prospects: SourceProspect[]; total?: number }>("/prospects.php", {
-          query: { page, pageSize: 5000 },
-        });
-        total = batch.total ?? total;
-        (batch.prospects ?? []).forEach((p) => prospectById.set(p.id, p));
-        missingIds = missingIds.filter((id) => !prospectById.has(id));
-      }
-
-      const map = new Map<string, number>();
-      monthContracts
-        .filter((c) => c.billingStatus !== "Annuler la confirmation")
-        .forEach((c) => {
-          const linked = c.prospectId ? prospectById.get(c.prospectId) : undefined;
-          const source = normalizeSource(linked?.source || c.source);
-          map.set(source, (map.get(source) ?? 0) + 1);
-        });
-      return Array.from(map.entries())
-        .map(([source, contrats]) => ({ source, contrats }))
+      const aggregated = await api<{ sources?: SourceBreakdownRow[] }>("/dashboard.php", {
+        query: { breakdown: "sources", from, to },
+      });
+      return (aggregated.sources ?? [])
+        .map((row) => ({ source: normalizeSource(row.source), contrats: row.contrats }))
         .sort((a, b) => b.contrats - a.contrats);
     };
 
@@ -296,34 +262,11 @@ function Dashboard() {
       .catch(() => { if (!cancelled) setMonthSourceBreakdown(null); })
       .finally(() => { if (!cancelled) setSourceBreakdownLoading(false); });
     return () => { cancelled = true; };
-  }, [chartMonth, refreshTick, prospects, hydrated]);
+  }, [chartMonth, refreshTick]);
 
-  const fallbackSourceBreakdown = useMemo(() => {
-    const prospectById = new Map(prospects.map((p) => [p.id, p]));
-    const map = new Map<string, number>();
-    contracts
-      .filter((c) => (c.signatureDate ?? "").startsWith(chartMonth))
-      // Exclude cancelled contracts so the breakdown only counts real
-      // contracts (consistent with KPIs + backend rdv_agents.php).
-      .filter((c) => c.billingStatus !== "Annuler la confirmation")
-      .forEach((c) => {
-        // Source of truth: linked prospect's source (current value),
-        // fallback to the contract's stored source, else "Autre".
-        const linked = c.prospectId ? prospectById.get(c.prospectId) : undefined;
-        const normalized = normalizeSource(linked?.source || c.source);
-        map.set(normalized, (map.get(normalized) ?? 0) + 1);
-      });
-    return Array.from(map.entries())
-      .map(([source, contrats]) => ({ source, contrats }))
-      .sort((a, b) => b.contrats - a.contrats);
-    // No slice — show 100% of sources that produced a contract this month.
-  }, [contracts, prospects, chartMonth]);
-
-  const sourceBreakdownPending = sourceBreakdownLoading || (!hydrated && monthSourceBreakdown === null);
-  const sourceBreakdown = useMemo(
-    () => monthSourceBreakdown ?? (sourceBreakdownPending ? [] : fallbackSourceBreakdown),
-    [fallbackSourceBreakdown, monthSourceBreakdown, sourceBreakdownPending],
-  );
+  const sourceBreakdownPending = sourceBreakdownLoading || monthSourceBreakdown === null;
+  const sourceBreakdown = monthSourceBreakdown ?? [];
+  const sourceBreakdownKey = `${chartMonth}:${sourceBreakdown.map((row) => `${row.source}-${row.contrats}`).join("|")}`;
 
 
 
