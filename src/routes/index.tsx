@@ -562,7 +562,7 @@ function Dashboard() {
               </select>
             </CardHeader>
             <CardContent className="h-72 xl:h-96">
-              {sourceBreakdownLoading && sourceBreakdown.length === 0 ? (
+              {sourceBreakdownPending && sourceBreakdown.length === 0 ? (
                 <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Chargement des sources…
                 </div>
