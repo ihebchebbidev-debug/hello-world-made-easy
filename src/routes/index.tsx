@@ -236,6 +236,8 @@ function Dashboard() {
   // The backend aggregates sources with a prospect join so first paint matches
   // the fully-hydrated result after switching months.
   type SourceBreakdownRow = { source: string; contrats: number };
+  type ChartContract = { prospectId?: string | null; source?: string | null; billingStatus?: string | null; signatureDate?: string | null };
+  type SourceProspect = { id: string; source?: string | null };
   const [monthSourceBreakdown, setMonthSourceBreakdown] = useState<SourceBreakdownRow[] | null>(null);
   const [sourceBreakdownLoading, setSourceBreakdownLoading] = useState(API_ENABLED);
   useEffect(() => {
@@ -248,14 +250,49 @@ function Dashboard() {
     const to = `${chartMonth}-${String(last).padStart(2, "0")}`;
     setSourceBreakdownLoading(true);
     setMonthSourceBreakdown(null);
-    api<{ sources: SourceBreakdownRow[] }>("/dashboard.php", {
-      query: { breakdown: "sources", from, to },
-    })
-      .then((r) => { if (!cancelled) setMonthSourceBreakdown(r.sources ?? []); })
+    const loadSourceBreakdown = async (): Promise<SourceBreakdownRow[]> => {
+      try {
+        const aggregated = await api<{ sources?: SourceBreakdownRow[] }>("/dashboard.php", {
+          query: { breakdown: "sources", from, to },
+        });
+        if (Array.isArray(aggregated.sources)) return aggregated.sources;
+      } catch { /* fall back to existing endpoints */ }
+
+      const monthContracts = await api<{ contracts: ChartContract[] }>("/contracts.php", {
+        query: { page: 1, pageSize: 5000, sigFrom: from, sigTo: to },
+      }).then((r) => r.contracts ?? []);
+      const prospectById = new Map<string, SourceProspect>(prospects.map((p) => [p.id, p]));
+      const missingIds = Array.from(new Set(
+        monthContracts
+          .map((c) => c.prospectId)
+          .filter((id): id is string => !!id && !prospectById.has(id)),
+      ));
+      const fetchedProspects = await Promise.all(
+        missingIds.map((id) => api<{ prospect: SourceProspect }>("/prospects.php", { query: { id } })
+          .then((r) => r.prospect)
+          .catch(() => null)),
+      );
+      fetchedProspects.forEach((p) => { if (p) prospectById.set(p.id, p); });
+
+      const map = new Map<string, number>();
+      monthContracts
+        .filter((c) => c.billingStatus !== "Annuler la confirmation")
+        .forEach((c) => {
+          const linked = c.prospectId ? prospectById.get(c.prospectId) : undefined;
+          const source = normalizeSource(linked?.source || c.source);
+          map.set(source, (map.get(source) ?? 0) + 1);
+        });
+      return Array.from(map.entries())
+        .map(([source, contrats]) => ({ source, contrats }))
+        .sort((a, b) => b.contrats - a.contrats);
+    };
+
+    loadSourceBreakdown()
+      .then((rows) => { if (!cancelled) setMonthSourceBreakdown(rows); })
       .catch(() => { if (!cancelled) setMonthSourceBreakdown(null); })
       .finally(() => { if (!cancelled) setSourceBreakdownLoading(false); });
     return () => { cancelled = true; };
-  }, [chartMonth, refreshTick]);
+  }, [chartMonth, refreshTick, prospects]);
 
   const fallbackSourceBreakdown = useMemo(() => {
     const prospectById = new Map(prospects.map((p) => [p.id, p]));
