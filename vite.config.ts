@@ -1,15 +1,29 @@
-// @lovable.dev/vite-tanstack-config already includes the following — do NOT add them manually
-// or the app will break with duplicate plugins:
-//   - tanstackStart, viteReact, tailwindcss, tsConfigPaths, nitro (build-only using cloudflare as a default target),
-//     componentTagger (dev-only), VITE_* env injection, @ path alias, React/TanStack dedupe,
-//     error logger plugins, and sandbox detection (port/host/strictPort).
-// You can pass additional config via defineConfig({ vite: { ... }, etc... }) if needed.
-import { defineConfig } from "@lovable.dev/vite-tanstack-config";
+// Lovable hosting uses the standard Lovable TanStack config.
+// Vercel needs a Nitro/Vercel server output instead of the Cloudflare build target.
+import tailwindcss from "@tailwindcss/vite";
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import viteReact from "@vitejs/plugin-react";
+import { defineConfig as defineLovableConfig } from "@lovable.dev/vite-tanstack-config";
+import { nitro } from "nitro/vite";
+import { fileURLToPath, URL } from "node:url";
+import { defineConfig as defineViteConfig, type ConfigEnv } from "vite";
+import tsConfigPaths from "vite-tsconfig-paths";
 
-export default defineConfig({
-  tanstackStart: {
-    // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
-    // nitro/vite builds from this
-    server: { entry: "server" },
-  },
-});
+const lovableConfig = defineLovableConfig();
+
+export default async function config(env: ConfigEnv) {
+  if (process.env.VERCEL === "1") {
+    return defineViteConfig({
+      server: { host: "::", port: 8080 },
+      resolve: {
+        alias: {
+          "@": fileURLToPath(new URL("./src", import.meta.url)),
+        },
+        dedupe: ["react", "react-dom", "react/jsx-runtime", "@tanstack/react-query", "@tanstack/query-core"],
+      },
+      plugins: [tailwindcss(), tsConfigPaths({ projects: ["./tsconfig.json"] }), tanstackStart(), nitro({ preset: "vercel" }), viteReact()],
+    });
+  }
+
+  return lovableConfig(env);
+}
