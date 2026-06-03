@@ -1,8 +1,24 @@
 <?php
 require_once __DIR__ . '/config.php';
-require_auth();
+$me = require_auth();
 require_method('GET');
 $db = (new Database())->getConnection();
+
+function dashboard_contracts_has_prospect_link(PDO $db): bool {
+    static $cached = null;
+    if ($cached !== null) return $cached;
+    try {
+        $s = $db->query("SHOW COLUMNS FROM extraneterp_contracts LIKE 'prospect_id'");
+        $cached = (bool)$s->fetch();
+    } catch (Throwable $e) {
+        $cached = false;
+    }
+    return $cached;
+}
+
+$role = $me['role'] ?? '';
+$isPrivileged = in_array($role, ['Admin','Administrateur','Manager','Superviseur','Backoffice','Présentation'], true);
+$isAgent = !$isPrivileged;
 
 $series = $_GET['series'] ?? null;
 $days   = max(1, min(60, (int)($_GET['days'] ?? 7)));
@@ -53,6 +69,50 @@ if ($series) {
 
 // ---- admin breakdown: per-company + cancellations (current month by default)
 $breakdown = $_GET['breakdown'] ?? null;
+if ($breakdown === 'sources') {
+    $from = $_GET['from'] ?? date('Y-m-01');
+    $to   = $_GET['to']   ?? date('Y-m-d');
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $from) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $to)) {
+        fail('Période invalide', 422);
+    }
+
+    $hasLink = dashboard_contracts_has_prospect_link($db);
+    $params = [':f' => $from, ':t' => $to];
+    $agentWhere = '';
+    if ($isAgent) {
+        if ($hasLink) {
+            $agentWhere = "AND (LOWER(c.assigned_to) = LOWER(:me) OR (c.prospect_id IS NOT NULL AND LOWER(p.assigned_to) = LOWER(:me2)))";
+            $params[':me'] = $me['username'];
+            $params[':me2'] = $me['username'];
+        } else {
+            $agentWhere = "AND LOWER(c.assigned_to) = LOWER(:me)";
+            $params[':me'] = $me['username'];
+        }
+    }
+
+    $sourceExpr = $hasLink
+        ? "COALESCE(NULLIF(TRIM(p.source),''), NULLIF(TRIM(c.source),''), 'AUTRE')"
+        : "COALESCE(NULLIF(TRIM(c.source),''), 'AUTRE')";
+    $join = $hasLink ? "LEFT JOIN extraneterp_prospects p ON p.id = c.prospect_id" : "";
+    $sql = "
+        SELECT UPPER($sourceExpr) AS source, COUNT(*) AS contracts_count
+        FROM extraneterp_contracts c
+        $join
+        WHERE DATE(c.signature_date) BETWEEN :f AND :t
+          AND c.billing_status <> 'Annuler la confirmation'
+          $agentWhere
+        GROUP BY source
+        ORDER BY contracts_count DESC, source ASC
+    ";
+    $st = $db->prepare($sql);
+    $st->execute($params);
+    $sources = array_map(fn($r) => [
+        'source'   => preg_replace('/\s+/', ' ', trim((string)$r['source'])),
+        'contrats' => (int)$r['contracts_count'],
+    ], $st->fetchAll());
+    ok(['period' => ['from' => $from, 'to' => $to], 'sources' => $sources]);
+}
+
 if ($breakdown === 'admin') {
     $from = $_GET['from'] ?? date('Y-m-01');
     $to   = $_GET['to']   ?? date('Y-m-d');
