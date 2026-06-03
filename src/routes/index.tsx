@@ -560,15 +560,21 @@ function Dashboard() {
               </select>
             </CardHeader>
             <CardContent className="h-72 xl:h-96">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={sourceBreakdown} dataKey="contrats" nameKey="source" innerRadius={50} outerRadius={85} paddingAngle={2} isAnimationActive={false}>
-                    {sourceBreakdown.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid oklch(0.92 0.008 240)" }} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                </PieChart>
-              </ResponsiveContainer>
+              {sourceBreakdownLoading && sourceBreakdown.length === 0 ? (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Chargement des sources…
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={sourceBreakdown} dataKey="contrats" nameKey="source" innerRadius={50} outerRadius={85} paddingAngle={2} isAnimationActive={false}>
+                      {sourceBreakdown.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid oklch(0.92 0.008 240)" }} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
         </div>
