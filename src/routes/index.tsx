@@ -33,6 +33,11 @@ export const Route = createFileRoute("/")({
 
 const COLORS = ["oklch(0.68 0.17 55)", "oklch(0.8 0.14 75)", "oklch(0.65 0.16 155)", "oklch(0.78 0.15 75)", "oklch(0.6 0.22 320)"];
 
+const normalizeSource = (value?: string | null) => {
+  const source = (value ?? "").trim().replace(/\s+/g, " ");
+  return source ? source.toUpperCase() : "AUTRE";
+};
+
 type StatTone = "indigo" | "emerald" | "amber" | "rose";
 
 const STAT_TONES: Record<StatTone, { gradient: string; ring: string; sparkStroke: string; sparkFill: string }> = {
@@ -115,7 +120,7 @@ const Stat = memo(function Stat({ label, value, sub, icon, trend, trendDir, tone
 });
 
 function Dashboard() {
-  const { contracts, users, prospects, refresh } = useErp();
+  const { contracts, users, prospects, refresh, hydrated } = useErp();
   const { user } = useAuth();
   const dashboardStats = useDashboardStats();
   const currency = useCurrency();
@@ -228,11 +233,13 @@ function Dashboard() {
 
 
   // Sources breakdown — driven by the month selector in the chart widget.
-  // Fetch contracts for the selected month directly from the server so the
-  // breakdown is never capped by the 2000-row client cache (which can hide
-  // sources on first paint while the cache is still warming up).
-  type ChartContract = { prospectId?: string | null; source?: string | null; billingStatus?: string | null };
-  const [monthContractsForChart, setMonthContractsForChart] = useState<ChartContract[] | null>(null);
+  // The backend aggregates sources with a prospect join so first paint matches
+  // the fully-hydrated result after switching months.
+  type SourceBreakdownRow = { source: string; contrats: number };
+  type ChartContract = { prospectId?: string | null; source?: string | null; billingStatus?: string | null; signatureDate?: string | null };
+  type SourceProspect = { id: string; source?: string | null };
+  const [monthSourceBreakdown, setMonthSourceBreakdown] = useState<SourceBreakdownRow[] | null>(null);
+  const [sourceBreakdownLoading, setSourceBreakdownLoading] = useState(API_ENABLED);
   useEffect(() => {
     if (!API_ENABLED) return;
     let cancelled = false;
@@ -241,23 +248,61 @@ function Dashboard() {
     const [y, m] = chartMonth.split("-").map(Number);
     const last = new Date(y, m, 0).getDate();
     const to = `${chartMonth}-${String(last).padStart(2, "0")}`;
-    setMonthContractsForChart(null);
-    api<{ contracts: any[] }>("/contracts.php", {
-      query: { page: 1, pageSize: 5000, sigFrom: from, sigTo: to },
-    })
-      .then((r) => { if (!cancelled) setMonthContractsForChart(r.contracts ?? []); })
-      .catch(() => { if (!cancelled) setMonthContractsForChart([]); });
-    return () => { cancelled = true; };
-  }, [chartMonth]);
+    setSourceBreakdownLoading(true);
+    setMonthSourceBreakdown(null);
+    const loadSourceBreakdown = async (): Promise<SourceBreakdownRow[]> => {
+      try {
+        const aggregated = await api<{ sources?: SourceBreakdownRow[] }>("/dashboard.php", {
+          query: { breakdown: "sources", from, to },
+        });
+        if (Array.isArray(aggregated.sources)) return aggregated.sources;
+      } catch { /* fall back to existing endpoints */ }
+      if (!hydrated) throw new Error("WAIT_FOR_STORE_HYDRATION");
 
-  const sourceBreakdown = useMemo(() => {
+      const monthContracts = await api<{ contracts: ChartContract[] }>("/contracts.php", {
+        query: { page: 1, pageSize: 5000, sigFrom: from, sigTo: to },
+      }).then((r) => r.contracts ?? []);
+      const prospectById = new Map<string, SourceProspect>(prospects.map((p) => [p.id, p]));
+      const neededProspectIds = Array.from(new Set(
+        monthContracts
+          .map((c) => c.prospectId)
+          .filter((id): id is string => !!id),
+      ));
+      let missingIds = neededProspectIds.filter((id) => !prospectById.has(id));
+      for (let page = 1, total = Number.POSITIVE_INFINITY; missingIds.length && (page - 1) * 5000 < total && page <= 10; page += 1) {
+        const batch = await api<{ prospects: SourceProspect[]; total?: number }>("/prospects.php", {
+          query: { page, pageSize: 5000 },
+        });
+        total = batch.total ?? total;
+        (batch.prospects ?? []).forEach((p) => prospectById.set(p.id, p));
+        missingIds = missingIds.filter((id) => !prospectById.has(id));
+      }
+
+      const map = new Map<string, number>();
+      monthContracts
+        .filter((c) => c.billingStatus !== "Annuler la confirmation")
+        .forEach((c) => {
+          const linked = c.prospectId ? prospectById.get(c.prospectId) : undefined;
+          const source = normalizeSource(linked?.source || c.source);
+          map.set(source, (map.get(source) ?? 0) + 1);
+        });
+      return Array.from(map.entries())
+        .map(([source, contrats]) => ({ source, contrats }))
+        .sort((a, b) => b.contrats - a.contrats);
+    };
+
+    loadSourceBreakdown()
+      .then((rows) => { if (!cancelled) setMonthSourceBreakdown(rows); })
+      .catch(() => { if (!cancelled) setMonthSourceBreakdown(null); })
+      .finally(() => { if (!cancelled) setSourceBreakdownLoading(false); });
+    return () => { cancelled = true; };
+  }, [chartMonth, refreshTick, prospects, hydrated]);
+
+  const fallbackSourceBreakdown = useMemo(() => {
     const prospectById = new Map(prospects.map((p) => [p.id, p]));
     const map = new Map<string, number>();
-    // Prefer the server-fetched month slice; fall back to the local cache
-    // while the request is in flight so the widget is never empty.
-    const src = monthContractsForChart
-      ?? contracts.filter((c) => (c.signatureDate ?? "").startsWith(chartMonth));
-    src
+    contracts
+      .filter((c) => (c.signatureDate ?? "").startsWith(chartMonth))
       // Exclude cancelled contracts so the breakdown only counts real
       // contracts (consistent with KPIs + backend rdv_agents.php).
       .filter((c) => c.billingStatus !== "Annuler la confirmation")
@@ -265,19 +310,20 @@ function Dashboard() {
         // Source of truth: linked prospect's source (current value),
         // fallback to the contract's stored source, else "Autre".
         const linked = c.prospectId ? prospectById.get(c.prospectId) : undefined;
-        const raw = (linked?.source || c.source || "").trim();
-        // Canonicalize so "RDV CHAUD" / "rdv chaud" / "Rdv  Chaud"
-        // don't split into multiple slices.
-        const normalized = raw
-          ? raw.replace(/\s+/g, " ").toUpperCase()
-          : "AUTRE";
+        const normalized = normalizeSource(linked?.source || c.source);
         map.set(normalized, (map.get(normalized) ?? 0) + 1);
       });
     return Array.from(map.entries())
       .map(([source, contrats]) => ({ source, contrats }))
       .sort((a, b) => b.contrats - a.contrats);
     // No slice — show 100% of sources that produced a contract this month.
-  }, [contracts, prospects, chartMonth, monthContractsForChart]);
+  }, [contracts, prospects, chartMonth]);
+
+  const sourceBreakdownPending = sourceBreakdownLoading || (!hydrated && monthSourceBreakdown === null);
+  const sourceBreakdown = useMemo(
+    () => monthSourceBreakdown ?? (sourceBreakdownPending ? [] : fallbackSourceBreakdown),
+    [fallbackSourceBreakdown, monthSourceBreakdown, sourceBreakdownPending],
+  );
 
 
 
@@ -519,15 +565,21 @@ function Dashboard() {
               </select>
             </CardHeader>
             <CardContent className="h-72 xl:h-96">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={sourceBreakdown} dataKey="contrats" nameKey="source" innerRadius={50} outerRadius={85} paddingAngle={2} isAnimationActive={false}>
-                    {sourceBreakdown.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid oklch(0.92 0.008 240)" }} />
-                  <Legend wrapperStyle={{ fontSize: 11 }} />
-                </PieChart>
-              </ResponsiveContainer>
+              {sourceBreakdownPending && sourceBreakdown.length === 0 ? (
+                <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                  <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Chargement des sources…
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={sourceBreakdown} dataKey="contrats" nameKey="source" innerRadius={50} outerRadius={85} paddingAngle={2} isAnimationActive={false}>
+                      {sourceBreakdown.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip contentStyle={{ borderRadius: 12, border: "1px solid oklch(0.92 0.008 240)" }} />
+                    <Legend wrapperStyle={{ fontSize: 11 }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </CardContent>
           </Card>
         </div>
