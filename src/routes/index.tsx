@@ -513,7 +513,7 @@ function Dashboard() {
                   <RefreshCw className="mr-2 h-4 w-4 animate-spin" /> Chargement des sources…
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer key={sourceBreakdownKey} width="100%" height="100%">
                   <PieChart>
                     <Pie data={sourceBreakdown} dataKey="contrats" nameKey="source" innerRadius={50} outerRadius={85} paddingAngle={2} isAnimationActive={false}>
                       {sourceBreakdown.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
