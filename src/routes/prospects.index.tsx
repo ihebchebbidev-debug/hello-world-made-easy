@@ -523,7 +523,7 @@ function ProspectsPage() {
                           </div>
                           <div>
                             <div className="font-medium text-sm">{p.civility} {p.lastName}</div>
-                            <div className="text-xs text-muted-foreground">{p.firstName} • {p.city}</div>
+                            <div className="text-xs text-muted-foreground">{p.firstName} • {p.postalCode ?? p.city}</div>
                           </div>
                         </Link>
                       </TableCell>
