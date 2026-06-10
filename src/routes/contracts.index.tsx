@@ -26,6 +26,7 @@ import {
   iterateAllContracts,
   type ContractFilters,
 } from "@/lib/erpPagination";
+import { loadPersistentState, savePersistentState } from "@/lib/persistentState";
 
 
 import { FilterBar, type FilterChip } from "@/components/FilterBar";
@@ -57,6 +58,22 @@ const billingColor: Record<string, string> = {
 
 const ALL = "__all__";
 const PAGE_SIZE_OPTIONS = [50, 100, 500, 2000];
+const CONTRACTS_STORAGE_KEY = "erp.contracts.lastView";
+
+type ContractViewState = {
+  searchInput: string;
+  search: string;
+  dateSig: string;
+  dateEffet: string;
+  dateVal: string;
+  assigne: string;
+  source: string;
+  statut: string;
+  partenaire: string;
+  cabinet: string;
+  pageSize: number;
+  customFilters: Record<string, string>;
+};
 // BILLING / PARTNERS / SOURCES / CABINETS come from option_lists.php
 // (admin-editable via /options and /statuses/contracts).
 
@@ -75,28 +92,43 @@ function ContractsPage() {
     [users],
   );
 
+  const savedContractView = loadPersistentState<ContractViewState>(CONTRACTS_STORAGE_KEY, {
+    searchInput: "",
+    search: "",
+    dateSig: "",
+    dateEffet: "",
+    dateVal: "",
+    assigne: ALL,
+    source: ALL,
+    statut: ALL,
+    partenaire: ALL,
+    cabinet: ALL,
+    pageSize: 100,
+    customFilters: {},
+  });
+
   // Search input (debounced)
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState(savedContractView.searchInput);
+  const [search, setSearch] = useState(savedContractView.search);
 
   // Filters
-  const [dateSig, setDateSig] = useState("");
-  const [dateEffet, setDateEffet] = useState("");
-  const [dateVal, setDateVal] = useState("");
-  const [assigne, setAssigne] = useState(ALL);
-  const [source, setSource] = useState(ALL);
-  const [statut, setStatut] = useState(ALL);
-  const [partenaire, setPartenaire] = useState(ALL);
-  const [cabinet, setCabinet] = useState(ALL);
+  const [dateSig, setDateSig] = useState(savedContractView.dateSig);
+  const [dateEffet, setDateEffet] = useState(savedContractView.dateEffet);
+  const [dateVal, setDateVal] = useState(savedContractView.dateVal);
+  const [assigne, setAssigne] = useState(savedContractView.assigne);
+  const [source, setSource] = useState(savedContractView.source);
+  const [statut, setStatut] = useState(savedContractView.statut);
+  const [partenaire, setPartenaire] = useState(savedContractView.partenaire);
+  const [cabinet, setCabinet] = useState(savedContractView.cabinet);
 
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(100);
+  const [pageSize, setPageSize] = useState(savedContractView.pageSize);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
 
   const { defs: customDefs, valuesById: customValuesById } = useCustomFieldsTable("contract");
   const [visibleCols, setVisibleCols] = useState<Set<string>>(new Set());
-  const [customFilters, setCustomFilters] = useState<Record<string, string>>({});
+  const [customFilters, setCustomFilters] = useState<Record<string, string>>(savedContractView.customFilters);
   const setCustomFilter = (k: string, v: string) =>
     setCustomFilters((prev) => {
       const next = { ...prev };
@@ -214,6 +246,23 @@ function ContractsPage() {
     assigne: string; source: string; statut: string; partenaire: string; cabinet: string;
   };
   const currentView: ViewState = { search, dateSig, dateEffet, dateVal, assigne, source, statut, partenaire, cabinet };
+  useEffect(() => {
+    savePersistentState(CONTRACTS_STORAGE_KEY, {
+      searchInput,
+      search,
+      dateSig,
+      dateEffet,
+      dateVal,
+      assigne,
+      source,
+      statut,
+      partenaire,
+      cabinet,
+      pageSize,
+      customFilters,
+    });
+  }, [searchInput, search, dateSig, dateEffet, dateVal, assigne, source, statut, partenaire, cabinet, pageSize, customFilters]);
+
   const applyView = (v: ViewState) => {
     setSearchInput(v.search ?? ""); setSearch(v.search ?? "");
     setDateSig(v.dateSig ?? ""); setDateEffet(v.dateEffet ?? "");

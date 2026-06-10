@@ -30,6 +30,7 @@ import {
 import type { Prospect } from "@/lib/types";
 import { useStatusOptions } from "@/lib/useStatusOptions";
 import { useOptionList } from "@/lib/useOptionList";
+import { loadPersistentState, savePersistentState } from "@/lib/persistentState";
 
 
 import { useNavigate } from "@tanstack/react-router";
@@ -61,6 +62,22 @@ const statusColor: Record<string, string> = {
 
 const ALL = "__all__";
 const PAGE_SIZE_OPTIONS = [50, 100, 500, 2000];
+const PROSPECTS_STORAGE_KEY = "erp.prospects.lastView";
+
+type ProspectViewState = {
+  searchInput: string;
+  search: string;
+  statut: string;
+  assigne: string;
+  source: string;
+  dateFrom: string;
+  dateTo: string;
+  check: string;
+  sortBy: ProspectSortField;
+  sortDir: SortDir;
+  pageSize: number;
+  customFilters: Record<string, string>;
+};
 
 // STATUS_OPTIONS and SOURCE_OPTIONS now come from dynamic hooks — see ProspectsPage.
 const CHECK_OPTIONS = [
@@ -83,23 +100,38 @@ function ProspectsPage() {
     [users],
   );
 
+  const savedProspectView = loadPersistentState<ProspectViewState>(PROSPECTS_STORAGE_KEY, {
+    searchInput: "",
+    search: "",
+    statut: ALL,
+    assigne: ALL,
+    source: ALL,
+    dateFrom: "",
+    dateTo: "",
+    check: ALL,
+    sortBy: "createdAt",
+    sortDir: "desc",
+    pageSize: 100,
+    customFilters: {},
+  });
+
   // Search input (debounced) + applied query
-  const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState(savedProspectView.searchInput);
+  const [search, setSearch] = useState(savedProspectView.search);
 
   // Filters
-  const [statut, setStatut] = useState(ALL);
-  const [assigne, setAssigne] = useState(ALL);
-  const [source, setSource] = useState(ALL);
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [check, setCheck] = useState(ALL);
+  const [statut, setStatut] = useState(savedProspectView.statut);
+  const [assigne, setAssigne] = useState(savedProspectView.assigne);
+  const [source, setSource] = useState(savedProspectView.source);
+  const [dateFrom, setDateFrom] = useState(savedProspectView.dateFrom);
+  const [dateTo, setDateTo] = useState(savedProspectView.dateTo);
+  const [check, setCheck] = useState(savedProspectView.check);
 
   // Sort + pagination
-  const [sortBy, setSortBy] = useState<ProspectSortField>("createdAt");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [sortBy, setSortBy] = useState<ProspectSortField>(savedProspectView.sortBy);
+  const [sortDir, setSortDir] = useState<SortDir>(savedProspectView.sortDir);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(100);
+  const [pageSize, setPageSize] = useState(savedProspectView.pageSize);
 
   // Selection (per-page)
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -107,7 +139,7 @@ function ProspectsPage() {
   // Custom fields
   const { defs: customDefs, valuesById: customValuesById } = useCustomFieldsTable("prospect");
   const [visibleCols, setVisibleCols] = useState<Set<string>>(new Set());
-  const [customFilters, setCustomFilters] = useState<Record<string, string>>({});
+  const [customFilters, setCustomFilters] = useState<Record<string, string>>(savedProspectView.customFilters);
   const setCustomFilter = (k: string, v: string) =>
     setCustomFilters((prev) => {
       const next = { ...prev };
@@ -221,6 +253,23 @@ function ProspectsPage() {
     sortBy: ProspectSortField; sortDir: SortDir;
   };
   const currentView: ViewState = { search, statut, assigne, source, dateFrom, dateTo, check, sortBy, sortDir };
+  useEffect(() => {
+    savePersistentState(PROSPECTS_STORAGE_KEY, {
+      searchInput,
+      search,
+      statut,
+      assigne,
+      source,
+      dateFrom,
+      dateTo,
+      check,
+      sortBy,
+      sortDir,
+      pageSize,
+      customFilters,
+    });
+  }, [searchInput, search, statut, assigne, source, dateFrom, dateTo, check, sortBy, sortDir, pageSize, customFilters]);
+
   const applyView = (v: ViewState) => {
     setSearchInput(v.search ?? ""); setSearch(v.search ?? "");
     setStatut(v.statut ?? ALL); setAssigne(v.assigne ?? ALL);
