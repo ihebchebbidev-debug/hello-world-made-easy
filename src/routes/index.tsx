@@ -170,6 +170,12 @@ function Dashboard() {
     pending: number;
   } | null>(null);
 
+  const { options: billingStatusOptions } = useStatusOptions("contract");
+  const cancelledBillingStatuses = useMemo(
+    () => new Set(billingStatusOptions.filter((o) => o.color === "destructive").map((o) => o.value)),
+    [billingStatusOptions],
+  );
+
   // Global 10-minute auto-refresh tick — keeps the whole dashboard fresh.
   const [refreshTick, setRefreshTick] = useState(0);
   useEffect(() => {
@@ -240,11 +246,6 @@ function Dashboard() {
   type SourceBreakdownRow = { source: string; contrats: number };
   type SourceChartContract = { prospectId?: string | null; source?: string | null; billingStatus?: string | null };
   type SourceChartProspect = { id: string; source?: string | null };
-  const { options: billingStatusOptions } = useStatusOptions("contract");
-  const cancelledBillingStatuses = useMemo(
-    () => new Set(billingStatusOptions.filter((o) => o.color === "destructive").map((o) => o.value)),
-    [billingStatusOptions],
-  );
 
   const [monthSourceBreakdown, setMonthSourceBreakdown] = useState<SourceBreakdownRow[] | null>(null);
   const [sourceBreakdownLoading, setSourceBreakdownLoading] = useState(API_ENABLED);
