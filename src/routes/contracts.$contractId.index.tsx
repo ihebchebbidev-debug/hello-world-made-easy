@@ -90,32 +90,21 @@ function ContractDetailsPage() {
     [billingOptions],
   );
 
-  if (!contract) {
+  const linkedProspect = useMemo(() => {
+    if (!contract) return undefined;
     return (
-      <AppLayout skeleton="detail">
-        <div className="p-10 text-center">
-          <h2 className="text-xl font-semibold">Contrat introuvable</h2>
-          <p className="text-sm text-muted-foreground mt-2">L'identifiant {contractId} n'existe pas dans la base.</p>
-          <Button className="mt-4" variant="outline" onClick={() => navigate({ to: "/contracts" })}>
-            <ArrowLeft className="h-4 w-4 mr-1.5" /> Retour
-          </Button>
-        </div>
-      </AppLayout>
-    );
-  }
-
-  // Les Agents peuvent consulter tous les contrats (lecture seule). Les actions
-  // d'édition / suppression / validation restent verrouillées plus bas via !isAgent.
-
-  const linkedProspect = useMemo(
-    () =>
       prospects.find((p) => contract.prospectId && p.id === contract.prospectId) ??
-      prospects.find((p) => p.lastName === contract.lastName && p.firstName === contract.firstName),
-    [prospects, contract],
+      prospects.find((p) => p.lastName === contract.lastName && p.firstName === contract.firstName)
+    );
+  }, [prospects, contract]);
+
+  const agent = useMemo(
+    () => (contract ? users.find((u) => u.username === contract.assignedTo) : undefined),
+    [users, contract],
   );
-  const agent = useMemo(() => users.find((u) => u.username === contract.assignedTo), [users, contract]);
 
   const timeline: TimelineItem[] = useMemo(() => {
+    if (!contract) return [];
     const items: TimelineItem[] = [];
     if (linkedProspect) {
       items.push({
@@ -380,7 +369,9 @@ function ContractDetailsPage() {
                 <Select value={contract.billingStatus} onValueChange={handleStatusChange} disabled={isAgent}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {billingOptions.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                    {billingOptions.map((option) => (
+                      <SelectItem key={option.id} value={option.value}>{option.value}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
