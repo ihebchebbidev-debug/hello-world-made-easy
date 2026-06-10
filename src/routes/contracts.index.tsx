@@ -56,6 +56,22 @@ const billingColor: Record<string, string> = {
   "Pré-validé": "bg-info/15 text-info border-info/20",
 };
 
+const billingTokenColor: Record<string, string> = {
+  success: "bg-success/15 text-success border-success/20",
+  warning: "bg-warning/15 text-warning-foreground border-warning/20",
+  destructive: "bg-destructive/15 text-destructive border-destructive/20",
+  info: "bg-info/15 text-info border-info/20",
+  primary: "bg-primary/15 text-primary border-primary/20",
+  accent: "bg-accent/15 text-accent-foreground border-accent/20",
+  muted: "bg-muted/10 text-muted-foreground border-border",
+};
+
+function getBillingBadgeClass(status: string, options: { value: string; color: string }[]) {
+  const option = options.find((o) => o.value === status);
+  if (option) return billingTokenColor[option.color] ?? billingColor[status] ?? "bg-muted/10 text-muted-foreground border-border";
+  return billingColor[status] ?? "bg-muted/10 text-muted-foreground border-border";
+}
+
 const ALL = "__all__";
 const PAGE_SIZE_OPTIONS = [50, 100, 500, 2000];
 const CONTRACTS_STORAGE_KEY = "erp.contracts.lastView";
@@ -79,7 +95,7 @@ type ContractViewState = {
 
 function ContractsPage() {
   const { users, updateContractBilling } = useErp();
-  const { values: BILLING } = useStatusOptions("contract");
+  const { options: BILLING_OPTIONS, values: BILLING } = useStatusOptions("contract");
   const PARTNERS = useOptionList("contract", "partner").values;
   const CABINETS = useOptionList("contract", "cabinet").values;
   const SOURCES = useOptionList("contract", "source").values;
@@ -593,7 +609,11 @@ function ContractRow({ c, checked, onToggle, extraCells, canEdit = true }: { c: 
       <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">{formatDate(c.signatureDate) ?? "—"}</TableCell>
       <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">{formatDate(c.validationDate) ?? "—"}</TableCell>
       <TableCell className="font-semibold text-sm">{formatAmount(c.premium, currency)}</TableCell>
-      <TableCell><Badge variant="outline" className={billingColor[c.billingStatus]}>{c.billingStatus}</Badge></TableCell>
+      <TableCell>
+        <Badge variant="outline" className={getBillingBadgeClass(c.billingStatus, BILLING_OPTIONS)}>
+          {c.billingStatus}
+        </Badge>
+      </TableCell>
       <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">{c.source}</TableCell>
       <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{c.assignedTo}</TableCell>
       {extraCells}

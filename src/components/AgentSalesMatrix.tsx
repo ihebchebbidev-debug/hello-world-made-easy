@@ -9,6 +9,7 @@ import {
 import { LayoutGrid, BarChart3 } from "lucide-react";
 import { useErp } from "@/lib/erpStore";
 import { useAuth } from "@/lib/auth";
+import { useStatusOptions } from "@/lib/useStatusOptions";
 import { formatAmount, useCurrency } from "@/lib/currency";
 import { useOptionList } from "@/lib/useOptionList";
 import { useAllUserGroups } from "@/lib/userGroups";
@@ -37,7 +38,7 @@ export const AgentSalesMatrix = memo(function AgentSalesMatrix({
   const { contracts, users } = useErp();
   const { user } = useAuth();
   const currency = useCurrency();
-  const { values: PARTNERS } = useOptionList("contract", "partner");
+  const { options: billingStatusOptions, values: PARTNERS } = useStatusOptions("contract");
   const allUserGroups = useAllUserGroups();
 
   const now = new Date();
@@ -103,6 +104,11 @@ export const AgentSalesMatrix = memo(function AgentSalesMatrix({
     });
   }, [contracts, ym]);
 
+  const cancelledBillingStatuses = useMemo(
+    () => new Set(billingStatusOptions.filter((o) => o.color === "destructive").map((o) => o.value)),
+    [billingStatusOptions],
+  );
+
   // Build matrix: rows (dynamic partners + "Annulé") × cols (agents) → revenue + count
   type Cell = { revenue: number; count: number };
   const matrix = useMemo(() => {
@@ -120,7 +126,7 @@ export const AgentSalesMatrix = memo(function AgentSalesMatrix({
     monthContracts.forEach((c) => {
       const agent = resolveAgent(c.assignedTo);
       if (!agent) return;
-      const cancelled = c.billingStatus === "Annuler la confirmation";
+      const cancelled = cancelledBillingStatuses.has(c.billingStatus);
       let row: string;
       if (cancelled) row = CANCEL_ROW;
       else {

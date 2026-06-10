@@ -50,11 +50,7 @@ export type Contract = {
   effectiveDate: string;
   validationDate: string | null;
   premium: number;
-  billingStatus:
-    | "Validé Confirmation"
-    | "En attente de validation"
-    | "Annuler la confirmation"
-    | "Pré-validé";
+  billingStatus: string;
   source: string;
   assignedTo: string;
   // ---- Extended (all optional / nullable) ----

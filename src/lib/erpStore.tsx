@@ -469,7 +469,7 @@ export function ErpProvider({ children }: { children: ReactNode }) {
           effectiveDate: String(r.effectiveDate ?? existing?.effectiveDate ?? today),
           validationDate: r.validationDate !== undefined ? (r.validationDate ? String(r.validationDate) : null) : (existing?.validationDate ?? null),
           premium: Number(r.premium ?? existing?.premium ?? 0) || 0,
-          billingStatus: (r.billingStatus ?? existing?.billingStatus ?? "Pré-validé") as Contract["billingStatus"],
+          billingStatus: String(r.billingStatus ?? existing?.billingStatus ?? "Pré-validé"),
           source: String(r.source ?? existing?.source ?? "Web"),
           assignedTo: String(r.assignedTo ?? existing?.assignedTo ?? "—"),
         };

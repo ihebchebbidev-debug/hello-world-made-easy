@@ -15,6 +15,7 @@ import {
 } from "recharts";
 import { useErp, useDashboardStats } from "@/lib/erpStore";
 import { useAuth } from "@/lib/auth";
+import { useStatusOptions } from "@/lib/useStatusOptions";
 import { formatAmount, formatCompact, useCurrency } from "@/lib/currency";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { api, API_ENABLED } from "@/lib/api";
@@ -207,7 +208,7 @@ function Dashboard() {
     const monthContractsAll = contracts.filter((c) => (c.signatureDate ?? "").startsWith(monthPrefix));
     // Exclude cancelled contracts so KPIs match the per-company breakdown
     // (`/dashboard.php?breakdown=admin`) which filters out 'Annuler la confirmation'.
-    const monthContracts = monthContractsAll.filter((c) => c.billingStatus !== "Annuler la confirmation");
+    const monthContracts = monthContractsAll.filter((c) => !cancelledBillingStatuses.has(c.billingStatus));
     const wonMonth = monthProspects.filter((p) => p.outcome === "won").length;
     const lostMonth = monthProspects.filter((p) => p.outcome === "lost").length;
     const pendingMonth = monthProspects.filter((p) => p.outcome === "pending").length;
@@ -239,6 +240,12 @@ function Dashboard() {
   type SourceBreakdownRow = { source: string; contrats: number };
   type SourceChartContract = { prospectId?: string | null; source?: string | null; billingStatus?: string | null };
   type SourceChartProspect = { id: string; source?: string | null };
+  const { options: billingStatusOptions } = useStatusOptions("contract");
+  const cancelledBillingStatuses = useMemo(
+    () => new Set(billingStatusOptions.filter((o) => o.color === "destructive").map((o) => o.value)),
+    [billingStatusOptions],
+  );
+
   const [monthSourceBreakdown, setMonthSourceBreakdown] = useState<SourceBreakdownRow[] | null>(null);
   const [sourceBreakdownLoading, setSourceBreakdownLoading] = useState(API_ENABLED);
   useEffect(() => {
@@ -279,7 +286,7 @@ function Dashboard() {
 
       const counts = new Map<string, number>();
       monthContracts
-        .filter((contract) => contract.billingStatus !== "Annuler la confirmation")
+        .filter((contract) => !cancelledBillingStatuses.has(contract.billingStatus ?? ""))
         .forEach((contract) => {
           const linkedProspect = contract.prospectId ? prospectById.get(contract.prospectId) : undefined;
           const source = normalizeSource(linkedProspect?.source || contract.source);

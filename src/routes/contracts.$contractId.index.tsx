@@ -44,10 +44,22 @@ export const Route = createFileRoute("/contracts/$contractId/")({
 
 // billingOptions now comes from useStatusOptions("contract") inside the component.
 
-function billingDot(s: string) {
-  if (s === "Validé Confirmation") return "bg-success";
-  if (s === "Annuler la confirmation") return "bg-destructive";
-  if (s === "En attente de validation") return "bg-warning";
+const billingDotColor: Record<string, string> = {
+  success: "bg-success",
+  warning: "bg-warning",
+  destructive: "bg-destructive",
+  info: "bg-info",
+  primary: "bg-primary",
+  accent: "bg-accent",
+  muted: "bg-muted-foreground/60",
+};
+
+function getBillingDotClass(status: string, options: { value: string; color: string }[]) {
+  const option = options.find((o) => o.value === status);
+  if (option) return billingDotColor[option.color] ?? "bg-muted-foreground/60";
+  if (status === "Validé Confirmation") return "bg-success";
+  if (status === "Annuler la confirmation") return "bg-destructive";
+  if (status === "En attente de validation") return "bg-warning";
   return "bg-muted-foreground/60";
 }
 
@@ -65,13 +77,18 @@ function ContractDetailsPage() {
   const { contractId } = Route.useParams();
   const navigate = useNavigate();
   const { contracts, prospects, users, events: calendarEvents, updateContractBilling, getContractActivity, logActivity } = useErp();
-  const { values: billingOptions } = useStatusOptions("contract");
+  const { options: billingOptions } = useStatusOptions("contract");
   const { user } = useAuth();
   const isAgent = isFieldRole(user?.role);
   const currency = useCurrency();
   const confirmDialog = useConfirm();
 
   const contract = contracts.find((c) => c.id === contractId);
+
+  const validatedBillingStatuses = useMemo(
+    () => new Set(billingOptions.filter((o) => o.color === "success").map((o) => o.value)),
+    [billingOptions],
+  );
 
   if (!contract) {
     return (
@@ -125,7 +142,7 @@ function ContractDetailsPage() {
       items.push({
         id: "val", date: contract.validationDate, type: "validation",
         title: "Validation backoffice", description: contract.billingStatus,
-        done: contract.billingStatus === "Validé Confirmation",
+        done: validatedBillingStatuses.has(contract.billingStatus),
       });
     } else {
       items.push({
@@ -234,7 +251,7 @@ function ContractDetailsPage() {
           </Cell>
           <Cell label="Statut facturation">
             <span className="inline-flex items-center gap-2">
-              <span className={`h-1.5 w-1.5 rounded-full ${billingDot(contract.billingStatus)}`} />
+              <span className={`h-1.5 w-1.5 rounded-full ${getBillingDotClass(contract.billingStatus, billingOptions)}`} />
               {contract.billingStatus}
             </span>
           </Cell>
