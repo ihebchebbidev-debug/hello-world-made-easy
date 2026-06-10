@@ -149,7 +149,7 @@ export const AgentSalesMatrix = memo(function AgentSalesMatrix({
     const out: Record<string, Cell> = {};
     agentNames.forEach((a) => {
       let revenue = 0, count = 0;
-      matrix.partnerRows.forEach((r) => {
+      matrix.rows.forEach((r) => {
         revenue += matrix.data[r][a].revenue;
         count += matrix.data[r][a].count;
       });
