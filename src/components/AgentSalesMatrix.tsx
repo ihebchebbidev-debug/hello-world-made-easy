@@ -38,7 +38,8 @@ export const AgentSalesMatrix = memo(function AgentSalesMatrix({
   const { contracts, users } = useErp();
   const { user } = useAuth();
   const currency = useCurrency();
-  const { options: billingStatusOptions, values: PARTNERS } = useStatusOptions("contract");
+  const { options: billingStatusOptions } = useStatusOptions("contract");
+  const { values: PARTNERS } = useOptionList("contract", "partner");
   const allUserGroups = useAllUserGroups();
 
   const now = new Date();
