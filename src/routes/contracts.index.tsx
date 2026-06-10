@@ -517,6 +517,7 @@ function ContractsPage() {
                     <ContractRow
                       key={c.id}
                       c={c}
+                      billingOptions={BILLING_OPTIONS}
                       canEdit={!isAgent}
                       checked={selected.has(c.id)}
                       onToggle={(v) => setSelected((prev) => {
@@ -584,7 +585,7 @@ function FilterSelect({
   );
 }
 
-function ContractRow({ c, checked, onToggle, extraCells, canEdit = true }: { c: Contract; checked: boolean; onToggle: (v: boolean) => void; extraCells?: React.ReactNode; canEdit?: boolean }) {
+function ContractRow({ c, checked, onToggle, extraCells, canEdit = true, billingOptions }: { c: Contract; checked: boolean; onToggle: (v: boolean) => void; extraCells?: React.ReactNode; canEdit?: boolean; billingOptions: { value: string; color: string }[] }) {
   const navigate = useNavigate();
   const currency = useCurrency();
   return (
@@ -610,7 +611,7 @@ function ContractRow({ c, checked, onToggle, extraCells, canEdit = true }: { c: 
       <TableCell className="hidden lg:table-cell text-sm text-muted-foreground">{formatDate(c.validationDate) ?? "—"}</TableCell>
       <TableCell className="font-semibold text-sm">{formatAmount(c.premium, currency)}</TableCell>
       <TableCell>
-        <Badge variant="outline" className={getBillingBadgeClass(c.billingStatus, BILLING_OPTIONS)}>
+        <Badge variant="outline" className={getBillingBadgeClass(c.billingStatus, billingOptions)}>
           {c.billingStatus}
         </Badge>
       </TableCell>

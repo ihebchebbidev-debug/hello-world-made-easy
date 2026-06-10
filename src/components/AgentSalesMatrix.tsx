@@ -9,21 +9,24 @@ import {
 import { LayoutGrid, BarChart3 } from "lucide-react";
 import { useErp } from "@/lib/erpStore";
 import { useAuth } from "@/lib/auth";
-import { useStatusOptions } from "@/lib/useStatusOptions";
+import { useStatusOptions, type StatusOption } from "@/lib/useStatusOptions";
 import { formatAmount, useCurrency } from "@/lib/currency";
-import { useOptionList } from "@/lib/useOptionList";
 import { useAllUserGroups } from "@/lib/userGroups";
 
-const CANCEL_ROW = "Annulé";
-const CANCEL_COLOR = "oklch(0.55 0.22 265)";
-const PALETTE = [
-  "oklch(0.72 0.19 145)", "oklch(0.82 0.16 95)", "oklch(0.65 0.22 30)",
-  "oklch(0.70 0.18 200)", "oklch(0.68 0.20 320)", "oklch(0.75 0.17 60)",
-  "oklch(0.62 0.22 10)",  "oklch(0.70 0.18 170)", "oklch(0.68 0.20 280)",
-  "oklch(0.74 0.17 120)",
-];
-const colorFor = (label: string, idx: number) =>
-  label === CANCEL_ROW ? CANCEL_COLOR : PALETTE[idx % PALETTE.length];
+const STATUS_DOT_COLOR: Record<string, string> = {
+  success: "oklch(0.45 0.64 140)",
+  warning: "oklch(0.85 0.6 80)",
+  destructive: "oklch(0.65 0.75 25)",
+  info: "oklch(0.62 0.65 260)",
+  primary: "oklch(0.6 0.7 190)",
+  accent: "oklch(0.72 0.62 320)",
+  muted: "oklch(0.62 0.05 240)",
+};
+
+const colorFor = (status: string, options: Map<string, StatusOption>) => {
+  const option = options.get(status);
+  return option ? STATUS_DOT_COLOR[option.color] ?? STATUS_DOT_COLOR.muted : STATUS_DOT_COLOR.muted;
+};
 
 const MONTHS_FR = [
   "Janvier","Février","Mars","Avril","Mai","Juin",
@@ -39,8 +42,12 @@ export const AgentSalesMatrix = memo(function AgentSalesMatrix({
   const { user } = useAuth();
   const currency = useCurrency();
   const { options: billingStatusOptions } = useStatusOptions("contract");
-  const { values: PARTNERS } = useOptionList("contract", "partner");
   const allUserGroups = useAllUserGroups();
+
+  const billingStatusByValue = useMemo(
+    () => new Map<string, StatusOption>(billingStatusOptions.map((o) => [o.value, o])),
+    [billingStatusOptions],
+  );
 
   const now = new Date();
   const [ym, setYm] = useState<string>(
@@ -105,20 +112,20 @@ export const AgentSalesMatrix = memo(function AgentSalesMatrix({
     });
   }, [contracts, ym]);
 
-  const cancelledBillingStatuses = useMemo(
-    () => new Set(billingStatusOptions.filter((o) => o.color === "destructive").map((o) => o.value)),
-    [billingStatusOptions],
-  );
+  const statusRows = useMemo(() => {
+    const rows = billingStatusOptions.map((o) => o.value);
+    const extraStatuses = Array.from(
+      new Set(monthContracts
+        .map((c) => (c.billingStatus ?? "").trim())
+        .filter((status) => status && !billingStatusByValue.has(status))),
+    );
+    return [...rows, ...extraStatuses];
+  }, [billingStatusOptions, billingStatusByValue, monthContracts]);
 
-  // Build matrix: rows (dynamic partners + "Annulé") × cols (agents) → revenue + count
+  // Build matrix: rows (billing statuses) × cols (agents) → revenue + count
   type Cell = { revenue: number; count: number };
   const matrix = useMemo(() => {
-    const partnerRows = PARTNERS.length ? PARTNERS : ["Autre"];
-    const rows: string[] = [...partnerRows, CANCEL_ROW];
-    const partnerSet = new Set(partnerRows.map((p) => p.toLowerCase()));
-    const fallbackRow = partnerRows.includes("Autre")
-      ? "Autre"
-      : partnerRows[partnerRows.length - 1];
+    const rows = statusRows.length ? statusRows : ["Autre"];
     const data: Record<string, Record<string, Cell>> = {};
     rows.forEach((r) => {
       data[r] = {};
@@ -127,21 +134,16 @@ export const AgentSalesMatrix = memo(function AgentSalesMatrix({
     monthContracts.forEach((c) => {
       const agent = resolveAgent(c.assignedTo);
       if (!agent) return;
-      const cancelled = cancelledBillingStatuses.has(c.billingStatus);
-      let row: string;
-      if (cancelled) row = CANCEL_ROW;
-      else {
-        const raw = (c.partner || "").trim();
-        const match = partnerRows.find((p) => p.toLowerCase() === raw.toLowerCase());
-        row = match ?? (partnerSet.has(raw.toLowerCase()) ? raw : fallbackRow);
-      }
-      const cell = data[row]?.[agent];
+      const status = (c.billingStatus ?? "").trim() || "Autre";
+      const row = rows.includes(status) ? status : "Autre";
+      if (!data[row]) return;
+      const cell = data[row][agent];
       if (!cell) return;
       cell.revenue += Number(c.premium) || 0;
       cell.count += 1;
     });
-    return { rows, partnerRows, data };
-  }, [monthContracts, agentNames, resolveAgent, PARTNERS]);
+    return { rows, data };
+  }, [monthContracts, agentNames, resolveAgent, statusRows]);
 
   const colTotals = useMemo(() => {
     const out: Record<string, Cell> = {};
@@ -228,7 +230,7 @@ export const AgentSalesMatrix = memo(function AgentSalesMatrix({
           <table className="w-full text-xs xl:text-sm tabular-nums">
             <thead>
               <tr className="bg-muted/60 text-muted-foreground">
-                <th className="text-left font-semibold px-3 py-2.5 sticky left-0 bg-muted/60">Compagnie</th>
+                <th className="text-left font-semibold px-3 py-2.5 sticky left-0 bg-muted/60">Statut facturation</th>
                 {agentNames.map((a) => (
                   <th key={a} className="text-right font-semibold px-3 py-2.5 whitespace-nowrap">{a}</th>
                 ))}
@@ -238,8 +240,7 @@ export const AgentSalesMatrix = memo(function AgentSalesMatrix({
             </thead>
             <tbody>
               {matrix.rows.map((r) => {
-                const idx = matrix.rows.indexOf(r);
-                const dot = colorFor(r, idx);
+                const dot = colorFor(r, billingStatusByValue);
                 return (
                   <tr key={r} className="border-t border-border hover:bg-accent/30 transition-colors">
                     <td className="px-3 py-2.5 font-semibold sticky left-0 bg-card">
