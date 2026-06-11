@@ -29,6 +29,9 @@ const colorFor = (status: string, options: Map<string, StatusOption>) => {
   return option ? STATUS_DOT_COLOR[option.color] ?? STATUS_DOT_COLOR.muted : STATUS_DOT_COLOR.muted;
 };
 
+const EXCLUDED_BILLING_STATUSES = new Set(["annuler la confirmation", "rétractation", "résiliation"]);
+const isExcludedBillingStatus = (status: string) => EXCLUDED_BILLING_STATUSES.has((status || "").trim().toLowerCase());
+
 const MONTHS_FR = [
   "Janvier","Février","Mars","Avril","Mai","Juin",
   "Juillet","Août","Septembre","Octobre","Novembre","Décembre",
@@ -165,6 +168,7 @@ export const AgentSalesMatrix = memo(function AgentSalesMatrix({
       agentNames.forEach((a) => { data[r][a] = { revenue: 0, count: 0 }; });
     });
     monthContracts.forEach((c) => {
+      if (isExcludedBillingStatus(c.billingStatus ?? "")) return;
       const agent = resolveAgent(c.assignedTo);
       if (!agent) return;
       const partner = (c.partner ?? "").trim() || "Autre";
@@ -178,7 +182,19 @@ export const AgentSalesMatrix = memo(function AgentSalesMatrix({
     return { rows, data };
   }, [monthContracts, agentNames, resolveAgent, partnerRows]);
 
-  const colTotals = useMemo(() => {
+  const activeColTotals = useMemo(() => {
+    const out: Record<string, Cell> = {};
+    agentNames.forEach((a) => {
+      let revenue = 0, count = 0;
+      matrix.rows.forEach((r) => {
+        if (isExcludedBillingStatus(r)) return;
+        revenue += matrix.data[r][a].revenue;
+        count += matrix.data[r][a].count;
+      });
+      out[a] = { revenue, count };
+    });
+    return out;
+  }, [matrix, agentNames]);
     const out: Record<string, Cell> = {};
     agentNames.forEach((a) => {
       let revenue = 0, count = 0;
@@ -232,9 +248,9 @@ export const AgentSalesMatrix = memo(function AgentSalesMatrix({
 
   const grandTotal = useMemo(() => {
     let revenue = 0, count = 0;
-    agentNames.forEach((a) => { revenue += colTotals[a].revenue; count += colTotals[a].count; });
+    agentNames.forEach((a) => { revenue += activeColTotals[a].revenue; count += activeColTotals[a].count; });
     return { revenue, count };
-  }, [colTotals, agentNames]);
+  }, [activeColTotals, agentNames]);
 
   const partnerGrandTotal = useMemo(() => {
     let revenue = 0, count = 0;
