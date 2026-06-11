@@ -195,17 +195,6 @@ export const AgentSalesMatrix = memo(function AgentSalesMatrix({
     });
     return out;
   }, [matrix, agentNames]);
-    const out: Record<string, Cell> = {};
-    agentNames.forEach((a) => {
-      let revenue = 0, count = 0;
-      matrix.rows.forEach((r) => {
-        revenue += matrix.data[r][a].revenue;
-        count += matrix.data[r][a].count;
-      });
-      out[a] = { revenue, count };
-    });
-    return out;
-  }, [matrix, agentNames]);
 
   const rowTotals = useMemo(() => {
     const out: Record<string, Cell> = {};
@@ -359,8 +348,8 @@ export const AgentSalesMatrix = memo(function AgentSalesMatrix({
                 {agentNames.map((a) => (
                   <td key={a} className="px-3 py-3 text-right font-bold">
                     <div className="flex flex-col items-end leading-tight">
-                      <span>{formatAmount(colTotals[a].revenue, currency)}</span>
-                      <span className="text-[10px] xl:text-[11px] font-medium text-muted-foreground">{colTotals[a].count} vente{colTotals[a].count > 1 ? "s" : ""}</span>
+                      <span>{formatAmount(activeColTotals[a].revenue, currency)}</span>
+                      <span className="text-[10px] xl:text-[11px] font-medium text-muted-foreground">{activeColTotals[a].count} vente{activeColTotals[a].count > 1 ? "s" : ""}</span>
                     </div>
                   </td>
                 ))}
