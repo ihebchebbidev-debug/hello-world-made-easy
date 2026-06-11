@@ -10,6 +10,7 @@ import { LayoutGrid, BarChart3 } from "lucide-react";
 import { useErp } from "@/lib/erpStore";
 import { useAuth } from "@/lib/auth";
 import { useStatusOptions, type StatusOption } from "@/lib/useStatusOptions";
+import { useOptionList } from "@/lib/useOptionList";
 import { formatAmount, useCurrency } from "@/lib/currency";
 import { useAllUserGroups } from "@/lib/userGroups";
 
@@ -42,6 +43,7 @@ export const AgentSalesMatrix = memo(function AgentSalesMatrix({
   const { user } = useAuth();
   const currency = useCurrency();
   const { options: billingStatusOptions } = useStatusOptions("contract");
+  const { values: PARTNERS } = useOptionList("contract", "partner");
   const allUserGroups = useAllUserGroups();
 
   const billingStatusByValue = useMemo(
@@ -122,6 +124,16 @@ export const AgentSalesMatrix = memo(function AgentSalesMatrix({
     return [...rows, ...extraStatuses];
   }, [billingStatusOptions, billingStatusByValue, monthContracts]);
 
+  const partnerRows = useMemo(() => {
+    const rows = PARTNERS.length ? PARTNERS : ["Autre"];
+    const extraPartners = Array.from(
+      new Set(monthContracts
+        .map((c) => (c.partner ?? "").trim())
+        .filter((partner) => partner && !rows.includes(partner))),
+    );
+    return [...rows, ...extraPartners];
+  }, [PARTNERS, monthContracts]);
+
   // Build matrix: rows (billing statuses) × cols (agents) → revenue + count
   type Cell = { revenue: number; count: number };
   const matrix = useMemo(() => {
@@ -144,6 +156,27 @@ export const AgentSalesMatrix = memo(function AgentSalesMatrix({
     });
     return { rows, data };
   }, [monthContracts, agentNames, resolveAgent, statusRows]);
+
+  const partnerMatrix = useMemo(() => {
+    const rows = partnerRows.length ? partnerRows : ["Autre"];
+    const data: Record<string, Record<string, Cell>> = {};
+    rows.forEach((r) => {
+      data[r] = {};
+      agentNames.forEach((a) => { data[r][a] = { revenue: 0, count: 0 }; });
+    });
+    monthContracts.forEach((c) => {
+      const agent = resolveAgent(c.assignedTo);
+      if (!agent) return;
+      const partner = (c.partner ?? "").trim() || "Autre";
+      const row = rows.includes(partner) ? partner : "Autre";
+      if (!data[row]) return;
+      const cell = data[row][agent];
+      if (!cell) return;
+      cell.revenue += Number(c.premium) || 0;
+      cell.count += 1;
+    });
+    return { rows, data };
+  }, [monthContracts, agentNames, resolveAgent, partnerRows]);
 
   const colTotals = useMemo(() => {
     const out: Record<string, Cell> = {};
@@ -171,11 +204,43 @@ export const AgentSalesMatrix = memo(function AgentSalesMatrix({
     return out;
   }, [matrix, agentNames]);
 
+  const partnerRowTotals = useMemo(() => {
+    const out: Record<string, Cell> = {};
+    partnerMatrix.rows.forEach((r) => {
+      let revenue = 0, count = 0;
+      agentNames.forEach((a) => {
+        revenue += partnerMatrix.data[r][a].revenue;
+        count += partnerMatrix.data[r][a].count;
+      });
+      out[r] = { revenue, count };
+    });
+    return out;
+  }, [partnerMatrix, agentNames]);
+
+  const partnerColTotals = useMemo(() => {
+    const out: Record<string, Cell> = {};
+    agentNames.forEach((a) => {
+      let revenue = 0, count = 0;
+      partnerMatrix.rows.forEach((r) => {
+        revenue += partnerMatrix.data[r][a].revenue;
+        count += partnerMatrix.data[r][a].count;
+      });
+      out[a] = { revenue, count };
+    });
+    return out;
+  }, [partnerMatrix, agentNames]);
+
   const grandTotal = useMemo(() => {
     let revenue = 0, count = 0;
     agentNames.forEach((a) => { revenue += colTotals[a].revenue; count += colTotals[a].count; });
     return { revenue, count };
   }, [colTotals, agentNames]);
+
+  const partnerGrandTotal = useMemo(() => {
+    let revenue = 0, count = 0;
+    agentNames.forEach((a) => { revenue += partnerColTotals[a].revenue; count += partnerColTotals[a].count; });
+    return { revenue, count };
+  }, [partnerColTotals, agentNames]);
 
   // Stacked chart data — one bar per agent, segments per partner (count-based)
   const chartData = useMemo(() => {
@@ -294,6 +359,58 @@ export const AgentSalesMatrix = memo(function AgentSalesMatrix({
           </table>
         </div>
 
+        {/* Partner matrix table */}
+        <div className="overflow-x-auto rounded-xl border border-border">
+          <div className="px-4 py-3 border-b border-border bg-muted/50 text-sm font-semibold">Par défaut par compagnie</div>
+          <table className="w-full text-xs xl:text-sm tabular-nums">
+            <thead>
+              <tr className="bg-muted/60 text-muted-foreground">
+                <th className="text-left font-semibold px-3 py-2.5 sticky left-0 bg-muted/60">Compagnie</th>
+                {agentNames.map((a) => (
+                  <th key={a} className="text-right font-semibold px-3 py-2.5 whitespace-nowrap">{a}</th>
+                ))}
+                <th className="text-right font-bold px-3 py-2.5 bg-primary/10 text-foreground">C.A</th>
+                <th className="text-right font-bold px-3 py-2.5 bg-primary/10 text-foreground">Nbr Ventes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {partnerMatrix.rows.map((r) => (
+                <tr key={r} className="border-t border-border hover:bg-accent/30 transition-colors">
+                  <td className="px-3 py-2.5 font-semibold sticky left-0 bg-card">{r}</td>
+                  {agentNames.map((a) => {
+                    const cell = partnerMatrix.data[r][a];
+                    const empty = cell.revenue === 0 && cell.count === 0;
+                    return (
+                      <td key={a} className={`px-3 py-2.5 text-right ${empty ? "text-muted-foreground/50" : ""}`}>
+                        {empty ? "—" : (
+                          <div className="flex flex-col items-end leading-tight">
+                            <span className="font-medium">{formatAmount(cell.revenue, currency)}</span>
+                            <span className="text-[10px] xl:text-[11px] text-muted-foreground">{cell.count} vente{cell.count > 1 ? "s" : ""}</span>
+                          </div>
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td className="px-3 py-2.5 text-right font-bold bg-primary/5">{formatAmount(partnerRowTotals[r].revenue, currency)}</td>
+                  <td className="px-3 py-2.5 text-right font-bold bg-primary/5">{partnerRowTotals[r].count}</td>
+                </tr>
+              ))}
+              <tr className="border-t-2 border-primary/40 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10">
+                <td className="px-3 py-3 font-bold sticky left-0 bg-primary/10">Total</td>
+                {agentNames.map((a) => (
+                  <td key={a} className="px-3 py-3 text-right font-bold">
+                    <div className="flex flex-col items-end leading-tight">
+                      <span>{formatAmount(partnerColTotals[a].revenue, currency)}</span>
+                      <span className="text-[10px] xl:text-[11px] font-medium text-muted-foreground">{partnerColTotals[a].count} vente{partnerColTotals[a].count > 1 ? "s" : ""}</span>
+                    </div>
+                  </td>
+                ))}
+                <td className="px-3 py-3 text-right font-extrabold bg-primary/15">{formatAmount(partnerGrandTotal.revenue, currency)}</td>
+                <td className="px-3 py-3 text-right font-extrabold bg-primary/15">{partnerGrandTotal.count}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </CardContent>
     </Card>
   );

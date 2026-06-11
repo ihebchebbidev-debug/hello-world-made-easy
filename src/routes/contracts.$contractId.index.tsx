@@ -144,10 +144,12 @@ function ContractDetailsPage() {
   }, [contract, linkedProspect, calendarEvents]);
 
   const handleExportCSV = () => {
+    if (!contract) return;
     exportCSV(`contrat-${contract.id}.csv`, toContractExportRows([contract as unknown as Record<string, unknown>]));
     toast.success("Export CSV généré");
   };
   const handleExportJSON = () => {
+    if (!contract) return;
     exportJSON(`contrat-${contract.id}.json`, {
       contrat: toContractExportRows([contract as unknown as Record<string, unknown>])[0],
       parcours: timeline,
@@ -157,9 +159,24 @@ function ContractDetailsPage() {
     toast.success("Export JSON généré");
   };
   const handleStatusChange = (status: string) => {
+    if (!contract) return;
     updateContractBilling(contract.id, status as typeof contract.billingStatus);
     toast.success("Statut mis à jour", { description: status });
   };
+
+  if (!contract) {
+    return (
+      <AppLayout skeleton="detail">
+        <div className="p-10 text-center">
+          <h2 className="text-xl font-semibold">Contrat introuvable</h2>
+          <p className="text-sm text-muted-foreground mt-2">L'identifiant {contractId} n'existe pas dans la base.</p>
+          <Button className="mt-4" variant="outline" onClick={() => navigate({ to: "/contracts" })}>
+            <ArrowLeft className="h-4 w-4 mr-1.5" /> Retour
+          </Button>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout skeleton="detail">
