@@ -2,7 +2,7 @@
 
 Upload the **contents** of this folder into your server's
 `public_html/intranetprotec/` directory so requests like
-`https://luccibyey.com.tn/intranetprotec/auth_login.php` resolve.
+`https://draminesaid.com/directadmin//intranetprotec/auth_login.php` resolve.
 
 ## Setup
 
