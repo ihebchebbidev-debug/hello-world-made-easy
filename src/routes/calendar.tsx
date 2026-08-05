@@ -529,7 +529,7 @@ function MonthView({ cursor, today, eventsFor, onDelete, onPickDay, onOpenProspe
                         <button onClick={(ev) => { ev.stopPropagation(); onDelete(e.id); }} className="opacity-0 group-hover:opacity-70 hover:opacity-100" aria-label="Supprimer"><Trash2 className="h-3 w-3" /></button>
                       </div>
                     ))}
-                    {overflow > 0 && <span onClick={(ev) => ev.stopPropagation()}><OverflowPopover date={d} events={events} hiddenCount={overflow} onDelete={onDelete} /></span>}
+                    {overflow > 0 && <span onClick={(ev) => ev.stopPropagation()}><OverflowDialog date={d} events={events} hiddenCount={overflow} onDelete={onDelete} onOpenProspect={onOpenProspect} /></span>}
                   </div>
                 </>
               )}
@@ -583,7 +583,7 @@ function WeekView({ cursor, today, eventsFor, onDelete, onPickDay, onOpenProspec
                   <div className="truncate">{e.title}</div>
                 </div>
               ))}
-              {overflow > 0 && <span onClick={(ev) => ev.stopPropagation()}><OverflowPopover date={d} events={events} hiddenCount={overflow} onDelete={onDelete} /></span>}
+              {overflow > 0 && <span onClick={(ev) => ev.stopPropagation()}><OverflowDialog date={d} events={events} hiddenCount={overflow} onDelete={onDelete} onOpenProspect={onOpenProspect} /></span>}
               {events.length === 0 && <div className="text-[11px] text-muted-foreground italic mt-2">Aucun événement</div>}
             </div>
           </div>
@@ -706,35 +706,55 @@ function DayView({ cursor, eventsFor, onDelete, onSave, onOpenProspect }: { curs
   );
 }
 
-function OverflowPopover({ date, events, hiddenCount, onDelete }: { date: Date; events: CalEvent[]; hiddenCount: number; onDelete: (id: string) => void | Promise<void> }) {
+function OverflowDialog({ date, events, hiddenCount, onDelete, onOpenProspect }: { date: Date; events: CalEvent[]; hiddenCount: number; onDelete: (id: string) => void | Promise<void>; onOpenProspect: (e: CalEvent) => void }) {
+  const [open, setOpen] = useState(false);
   return (
-    <Popover>
-      <PopoverTrigger asChild>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
         <button className="text-[10px] font-medium text-primary hover:underline px-1.5 py-0.5">
           +{hiddenCount} en plus
         </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-72 p-0" align="start">
-        <div className="px-3 py-2 border-b border-border">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground">{dayLong[(date.getDay() + 6) % 7]}</div>
-          <div className="text-sm font-semibold">{frDate(date)}</div>
-        </div>
-        <div className="max-h-72 overflow-y-auto p-2 space-y-1">
+      </DialogTrigger>
+      <DialogContent className="w-[min(95vw,640px)] max-h-[90vh] overflow-hidden p-0">
+        <DialogHeader>
+          <DialogTitle>Événements du {dayLong[(date.getDay() + 6) % 7]} {frDate(date)}</DialogTitle>
+          <DialogDescription>{events.length} événement{events.length > 1 ? "s" : ""}</DialogDescription>
+        </DialogHeader>
+        <div className="overflow-y-auto max-h-[calc(90vh-8rem)] p-3 space-y-3">
           {events.map((e) => (
-            <div key={e.id} className={`text-[11px] px-2 py-1.5 rounded ${typeColor[e.type]} group`}>
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-semibold">{e.time}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] uppercase opacity-70">{typeLabel[e.type]}</span>
-                  <button onClick={() => onDelete(e.id)} className="opacity-50 hover:opacity-100"><Trash2 className="h-3 w-3" /></button>
+            <button
+              key={e.id}
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                onOpenProspect(e);
+              }}
+              className={`w-full text-left rounded-lg p-3 ${typeColor[e.type]} hover:brightness-110 transition`}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="font-semibold text-sm">{e.time} — {e.title}</div>
+                  <div className="text-[11px] text-muted-foreground mt-1">@{e.agent}</div>
                 </div>
+                <span className="text-[10px] uppercase tracking-wide opacity-80">{typeLabel[e.type]}</span>
               </div>
-              <div className="truncate">{e.title}</div>
-              <div className="text-[10px] text-muted-foreground mt-0.5">@{e.agent}</div>
-            </div>
+              <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
+                <span>{e.prospectId ? "Prospect lié" : "Aucun prospect lié"}</span>
+                <button
+                  type="button"
+                  onClick={(ev) => { ev.stopPropagation(); onDelete(e.id); }}
+                  className="text-[10px] text-destructive hover:text-destructive-foreground"
+                >
+                  Supprimer
+                </button>
+              </div>
+            </button>
           ))}
         </div>
-      </PopoverContent>
-    </Popover>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Fermer</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
