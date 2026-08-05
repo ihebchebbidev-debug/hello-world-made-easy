@@ -37,6 +37,62 @@ function row_to_prospect(array $r): array {
     ];
 }
 
+/**
+ * Create a calendar event for a prospect when status becomes 'Devis'.
+ * Safe no-op if calendar table/columns missing or a similar recent event exists.
+ */
+function create_calendar_event_for_devis(PDO $db, string $prospectId, string $firstName, string $lastName, ?string $agent = null, array $me = null): void {
+    try {
+        $hasLink = (bool)$db->query("SHOW COLUMNS FROM extraneterp_calendar_events LIKE 'prospect_id'")->fetch();
+    } catch (Throwable $e) { $hasLink = false; }
+    try {
+        $hasOrig = (bool)$db->query("SHOW COLUMNS FROM extraneterp_calendar_events LIKE 'original_agent'")->fetch();
+    } catch (Throwable $e) { $hasOrig = false; }
+
+    $title = trim("Devis — " . trim((string)$lastName . ' ' . $firstName));
+    if ($title === '') $title = 'Devis';
+
+    // Deduplicate: skip if a recent similar event exists for this prospect
+    try {
+        if ($hasLink) {
+            $q = $db->prepare("SELECT COUNT(*) FROM extraneterp_calendar_events WHERE prospect_id = :pid AND title LIKE :t AND date >= CURDATE() - INTERVAL 30 DAY");
+            $q->execute([':pid' => $prospectId, ':t' => $title . '%']);
+            $n = (int)$q->fetchColumn();
+            if ($n > 0) return;
+        } else {
+            $q = $db->prepare("SELECT COUNT(*) FROM extraneterp_calendar_events WHERE title LIKE :t AND date >= CURDATE() - INTERVAL 30 DAY");
+            $q->execute([':t' => $title . '%']);
+            $n = (int)$q->fetchColumn();
+            if ($n > 0) return;
+        }
+    } catch (Throwable $e) { /* best-effort dedupe; continue to attempt insert */ }
+
+    // Default agent fallback: current user if none provided
+    $agentVal = $agent ?? ($me['username'] ?? '');
+    $id = 'E-' . substr(bin2hex(random_bytes(6)), 0, 8);
+    $date = date('Y-m-d');
+    $time = '09:00:00';
+    $type = 'rappel';
+
+    try {
+        if ($hasLink && $hasOrig) {
+            $ins = $db->prepare('INSERT INTO extraneterp_calendar_events (id,title,date,time,type,agent,original_agent,prospect_id) VALUES (:id,:t,:d,:tm,:tp,:a,:oa,:pid)');
+            $ins->execute([':id'=>$id, ':t'=>$title, ':d'=>$date, ':tm'=>$time, ':tp'=>$type, ':a'=>$agentVal, ':oa'=>$agentVal, ':pid'=>$prospectId]);
+        } elseif ($hasLink) {
+            $ins = $db->prepare('INSERT INTO extraneterp_calendar_events (id,title,date,time,type,agent,prospect_id) VALUES (:id,:t,:d,:tm,:tp,:a,:pid)');
+            $ins->execute([':id'=>$id, ':t'=>$title, ':d'=>$date, ':tm'=>$time, ':tp'=>$type, ':a'=>$agentVal, ':pid'=>$prospectId]);
+        } elseif ($hasOrig) {
+            $ins = $db->prepare('INSERT INTO extraneterp_calendar_events (id,title,date,time,type,agent,original_agent) VALUES (:id,:t,:d,:tm,:tp,:a,:oa)');
+            $ins->execute([':id'=>$id, ':t'=>$title, ':d'=>$date, ':tm'=>$time, ':tp'=>$type, ':a'=>$agentVal, ':oa'=>$agentVal]);
+        } else {
+            $ins = $db->prepare('INSERT INTO extraneterp_calendar_events (id,title,date,time,type,agent) VALUES (:id,:t,:d,:tm,:tp,:a)');
+            $ins->execute([':id'=>$id, ':t'=>$title, ':d'=>$date, ':tm'=>$time, ':tp'=>$type, ':a'=>$agentVal]);
+        }
+    } catch (Throwable $e) {
+        // If table/columns missing or other DB error, silently ignore — non-critical
+    }
+}
+
 // Role-based scoping: Agents only see leads assigned to them. Unassigned
 // leads are hidden from agents (claiming still works through /dispatch via
 // the dedicated POST action=claim endpoint). Manager / Administrateur /
@@ -350,6 +406,22 @@ if ($method === 'POST') {
             $st = $db->prepare($sql);
             $st->execute(array_merge([$st_v], $ids));
             foreach ($ids as $pid) log_action($db, 'prospect', $pid, 'status', '', $st_v, $me['username'] ?? '');
+            // If the new status is Devis, create calendar events for those prospects
+            if ($st_v === 'Devis') {
+                foreach ($ids as $pid) {
+                    try {
+                        $pstmt = $db->prepare('SELECT first_name, last_name, assigned_to FROM extraneterp_prospects WHERE id = :id');
+                        $pstmt->execute([':id' => $pid]);
+                        $prow = $pstmt->fetch();
+                        if ($prow) {
+                            $f = $prow['first_name'] ?? '';
+                            $l = $prow['last_name'] ?? '';
+                            $agent = $prow['assigned_to'] ?? null;
+                            create_calendar_event_for_devis($db, $pid, $f, $l, $agent, $me);
+                        }
+                    } catch (Throwable $e) { /* ignore per-row failures */ }
+                }
+            }
             ok(['updated' => $st->rowCount()]);
         }
         if ($op === 'check') {
@@ -455,6 +527,15 @@ if ($method === 'POST') {
             ]);
         }
 
+        // If this row's status is 'Devis', create a calendar event (best-effort, deduped).
+        try {
+            $fn = trim($r['firstName'] ?? '');
+            $stRow = $r['status'] ?? 'A recontacter (Voir Commentaire)';
+            if ($stRow === 'Devis') {
+                create_calendar_event_for_devis($db, $id, $fn, $ln, $assignedTo, $me);
+            }
+        } catch (Throwable $e) { /* ignore event creation failures */ }
+
         // Optional custom field values shipped alongside the row
         if (isset($r['customValues']) && is_array($r['customValues'])) {
             foreach ($r['customValues'] as $k => $v) {
@@ -557,6 +638,15 @@ if ($method === 'PATCH' || $method === 'PUT') {
         $next = (string)($params[":$k"] ?? '');
         if ($prev === $next) continue; // skip no-op writes
         log_action($db, 'prospect', $id, $k, $prev, $next, $me['username'] ?? '');
+    }
+    // If status was changed to 'Devis', create a calendar event (best-effort)
+    if (array_key_exists('status', $in) && ($in['status'] ?? '') === 'Devis' && (($curRow['status'] ?? '') !== 'Devis')) {
+        try {
+            $pstmt = $db->prepare('SELECT first_name, last_name, assigned_to FROM extraneterp_prospects WHERE id = :id');
+            $pstmt->execute([':id' => $id]);
+            $prow = $pstmt->fetch();
+            if ($prow) create_calendar_event_for_devis($db, $id, $prow['first_name'] ?? '', $prow['last_name'] ?? '', $prow['assigned_to'] ?? null, $me);
+        } catch (Throwable $e) { /* ignore */ }
     }
     ok(['message' => 'Prospect mis à jour']);
 }
