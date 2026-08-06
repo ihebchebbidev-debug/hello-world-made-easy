@@ -139,8 +139,19 @@ const typeColor: Record<string, string> = {
   rdv: "bg-info/15 text-info border-l-2 border-info",
   rappel: "bg-warning/15 text-warning-foreground border-l-2 border-warning",
   signature: "bg-success/15 text-success border-l-2 border-success",
+  devis: "bg-primary/15 text-primary border-l-2 border-primary",
 };
-const typeLabel: Record<string, string> = { rdv: "Rendez-vous", rappel: "Rappel", signature: "Signature" };
+const typeLabel: Record<string, string> = { rdv: "Rendez-vous", rappel: "Rappel", signature: "Signature", devis: "Devis" };
+
+// Treat events whose title begins with "Devis" as type 'devis' so they
+// are shown with their own label/color even if backend stored them as 'rdv'.
+const isDevisTitle = (t?: string) => {
+  if (!t) return false;
+  return /^\s*devis\b/i.test(t.trim());
+};
+const getDisplayType = (e: CalEvent) => (isDevisTitle(e.title) ? 'devis' : (e.type ?? 'rdv'));
+const displayColor = (e: CalEvent) => typeColor[getDisplayType(e)] ?? typeColor['rdv'];
+const displayLabel = (e: CalEvent) => typeLabel[getDisplayType(e)] ?? typeLabel['rdv'];
 
 type ViewMode = "mois" | "semaine" | "jour";
 
@@ -332,6 +343,7 @@ function CalendarPage() {
               <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-info" />RDV</span>
               <span className="inline-flex items-center gap-1.5 ml-2"><span className="h-2 w-2 rounded-full bg-warning" />Rappel</span>
               <span className="inline-flex items-center gap-1.5 ml-2"><span className="h-2 w-2 rounded-full bg-success" />Signature</span>
+              <span className="inline-flex items-center gap-1.5 ml-2"><span className="h-2 w-2 rounded-full bg-primary" />Devis</span>
             </div>
             <div className="inline-flex rounded-md border border-border bg-muted/30 p-0.5">
               {(["mois","semaine","jour"] as const).map((v) => (
@@ -389,7 +401,7 @@ function NewEventDialog({
   const applyProspect = (p: Prospect | null) => {
     if (p) {
       setLinkedProspectId(p.id);
-      setTitle(`${type === "rappel" ? "Rappel" : type === "signature" ? "Signature" : "RDV"} — ${p.firstName} ${p.lastName}`);
+      setTitle(`${type === "rappel" ? "Rappel" : type === "signature" ? "Signature" : type === "devis" ? "Devis" : "RDV"} — ${p.firstName} ${p.lastName}`);
       if (p.assignedTo) setAgent(p.assignedTo);
     } else {
       setLinkedProspectId(undefined);
@@ -438,7 +450,7 @@ function NewEventDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Nouvel événement</DialogTitle>
-          <DialogDescription>Planifiez un RDV, rappel ou signature.</DialogDescription>
+          <DialogDescription>Planifiez un RDV, rappel, signature ou devis.</DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">
           <div className="space-y-1.5">
@@ -463,6 +475,7 @@ function NewEventDialog({
                   <SelectItem value="rdv">Rendez-vous</SelectItem>
                   <SelectItem value="rappel">Rappel</SelectItem>
                   <SelectItem value="signature">Signature</SelectItem>
+                  <SelectItem value="devis">Devis</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -523,7 +536,7 @@ function MonthView({ cursor, today, eventsFor, onDelete, onPickDay, onOpenProspe
                         key={e.id}
                         onClick={(ev) => { ev.stopPropagation(); onOpenProspect(e); }}
                         title="Ouvrir le prospect"
-                        className={`text-[10px] px-1.5 py-1 rounded truncate ${typeColor[e.type]} group flex items-center justify-between gap-1 cursor-pointer hover:brightness-110`}
+                        className={`text-[10px] px-1.5 py-1 rounded truncate ${displayColor(e)} group flex items-center justify-between gap-1 cursor-pointer hover:brightness-110`}
                       >
                         <span><span className="font-semibold">{e.time}</span> {e.title}</span>
                         <button onClick={(ev) => { ev.stopPropagation(); onDelete(e.id); }} className="opacity-0 group-hover:opacity-70 hover:opacity-100" aria-label="Supprimer"><Trash2 className="h-3 w-3" /></button>
@@ -574,7 +587,7 @@ function WeekView({ cursor, today, eventsFor, onDelete, onPickDay, onOpenProspec
                   key={e.id}
                   onClick={(ev) => { ev.stopPropagation(); onOpenProspect(e); }}
                   title="Ouvrir le prospect"
-                  className={`text-[11px] px-2 py-1.5 rounded ${typeColor[e.type]} group cursor-pointer hover:brightness-110`}
+                  className={`text-[11px] px-2 py-1.5 rounded ${displayColor(e)} group cursor-pointer hover:brightness-110`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="font-semibold">{e.time}</div>
@@ -656,12 +669,12 @@ function DayView({ cursor, eventsFor, onDelete, onSave, onOpenProspect }: { curs
                 <div className="text-xs text-muted-foreground/60 italic">—</div>
               ) : list.map((e) => {
                 const status = e.rdvStatus ?? "pending";
-                const editable = e.type === "rdv" && canEdit(e) && status !== "won";
+                const editable = getDisplayType(e) === "rdv" && canEdit(e) && status !== "won";
                 return (
                   <div
                     key={e.id}
                     title="Ouvrir le prospect"
-                    className={`text-sm px-3 py-2 rounded ${typeColor[e.type]} group hover:brightness-110`}
+                    className={`text-sm px-3 py-2 rounded ${displayColor(e)} group hover:brightness-110`}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span
@@ -669,13 +682,13 @@ function DayView({ cursor, eventsFor, onDelete, onSave, onOpenProspect }: { curs
                         className="font-semibold cursor-pointer"
                       >{e.time} — {e.title}</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] uppercase tracking-wider opacity-70">{typeLabel[e.type]}</span>
+                        <span className="text-[10px] uppercase tracking-wider opacity-70">{displayLabel(e)}</span>
                         <button onClick={(ev) => { ev.stopPropagation(); onDelete(e.id); }} className="opacity-50 hover:opacity-100"><Trash2 className="h-3.5 w-3.5" /></button>
                       </div>
                     </div>
                     <div className="text-xs text-muted-foreground mt-0.5 flex items-center justify-between gap-2 flex-wrap">
                       <span>Avec @{e.agent}</span>
-                      {e.type === "rdv" && (
+                      {getDisplayType(e) === "rdv" && (
                         editable ? (
                           <Select value={status} onValueChange={(v) => changeStatus(e, v as NonNullable<CalEvent["rdvStatus"]>)}>
                             <SelectTrigger className={`h-7 w-[160px] text-[11px] font-semibold border ${STATUS_CLASS[status]}`}>
@@ -729,14 +742,14 @@ function OverflowDialog({ date, events, hiddenCount, onDelete, onOpenProspect }:
                 setOpen(false);
                 onOpenProspect(e);
               }}
-              className={`w-full text-left rounded-lg p-3 ${typeColor[e.type]} hover:brightness-110 transition`}
+              className={`w-full text-left rounded-lg p-3 ${displayColor(e)} hover:brightness-110 transition`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="font-semibold text-sm">{e.time} — {e.title}</div>
                   <div className="text-[11px] text-muted-foreground mt-1">@{e.agent}</div>
                 </div>
-                <span className="text-[10px] uppercase tracking-wide opacity-80">{typeLabel[e.type]}</span>
+                <span className="text-[10px] uppercase tracking-wide opacity-80">{displayLabel(e)}</span>
               </div>
               <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-muted-foreground">
                 <span>{e.prospectId ? "Prospect lié" : "Aucun prospect lié"}</span>

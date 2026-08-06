@@ -125,7 +125,7 @@ export type CalEvent = {
   title: string;
   date: string; // ISO YYYY-MM-DD
   time: string;
-  type: "rdv" | "rappel" | "signature";
+  type: "rdv" | "rappel" | "signature" | "devis";
   agent: string;
   prospectId?: string | null;
   rdvStatus?: "pending" | "nrp" | "lost" | "won";

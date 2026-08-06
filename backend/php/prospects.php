@@ -41,7 +41,7 @@ function row_to_prospect(array $r): array {
  * Create a calendar event for a prospect when status becomes 'Devis'.
  * Safe no-op if calendar table/columns missing or a similar recent event exists.
  */
-function create_calendar_event_for_devis(PDO $db, string $prospectId, string $firstName, string $lastName, ?string $agent = null, array $me = null): void {
+function create_calendar_event_for_devis(PDO $db, string $prospectId, string $firstName, string $lastName, ?string $agent = null, array $me = null, bool $force = false): bool {
     try {
         $hasLink = (bool)$db->query("SHOW COLUMNS FROM extraneterp_calendar_events LIKE 'prospect_id'")->fetch();
     } catch (Throwable $e) { $hasLink = false; }
@@ -52,18 +52,28 @@ function create_calendar_event_for_devis(PDO $db, string $prospectId, string $fi
     $title = trim("Devis — " . trim((string)$lastName . ' ' . $firstName));
     if ($title === '') $title = 'Devis';
 
-    // Deduplicate: skip if a recent similar event exists for this prospect
+    // Deduplicate: when $force==true skip only if ANY event exists for the prospect;
+    // otherwise skip when a similar titled event exists in the last 30 days.
     try {
-        if ($hasLink) {
-            $q = $db->prepare("SELECT COUNT(*) FROM extraneterp_calendar_events WHERE prospect_id = :pid AND title LIKE :t AND date >= CURDATE() - INTERVAL 30 DAY");
-            $q->execute([':pid' => $prospectId, ':t' => $title . '%']);
-            $n = (int)$q->fetchColumn();
-            if ($n > 0) return;
+        if ($force) {
+            if ($hasLink) {
+                $q = $db->prepare("SELECT COUNT(*) FROM extraneterp_calendar_events WHERE prospect_id = :pid");
+                $q->execute([':pid' => $prospectId]);
+                $n = (int)$q->fetchColumn();
+                if ($n > 0) return false;
+            }
         } else {
-            $q = $db->prepare("SELECT COUNT(*) FROM extraneterp_calendar_events WHERE title LIKE :t AND date >= CURDATE() - INTERVAL 30 DAY");
-            $q->execute([':t' => $title . '%']);
-            $n = (int)$q->fetchColumn();
-            if ($n > 0) return;
+            if ($hasLink) {
+                $q = $db->prepare("SELECT COUNT(*) FROM extraneterp_calendar_events WHERE prospect_id = :pid AND title LIKE :t AND date >= CURDATE() - INTERVAL 30 DAY");
+                $q->execute([':pid' => $prospectId, ':t' => $title . '%']);
+                $n = (int)$q->fetchColumn();
+                if ($n > 0) return false;
+            } else {
+                $q = $db->prepare("SELECT COUNT(*) FROM extraneterp_calendar_events WHERE title LIKE :t AND date >= CURDATE() - INTERVAL 30 DAY");
+                $q->execute([':t' => $title . '%']);
+                $n = (int)$q->fetchColumn();
+                if ($n > 0) return false;
+            }
         }
     } catch (Throwable $e) { /* best-effort dedupe; continue to attempt insert */ }
 
@@ -71,8 +81,8 @@ function create_calendar_event_for_devis(PDO $db, string $prospectId, string $fi
     $agentVal = $agent ?? ($me['username'] ?? '');
     $id = 'E-' . substr(bin2hex(random_bytes(6)), 0, 8);
     $date = date('Y-m-d');
-    $time = '09:00:00';
-    $type = 'rappel';
+    $time = '10:00:00';
+    $type = 'rdv';
 
     try {
         if ($hasLink && $hasOrig) {
@@ -88,9 +98,11 @@ function create_calendar_event_for_devis(PDO $db, string $prospectId, string $fi
             $ins = $db->prepare('INSERT INTO extraneterp_calendar_events (id,title,date,time,type,agent) VALUES (:id,:t,:d,:tm,:tp,:a)');
             $ins->execute([':id'=>$id, ':t'=>$title, ':d'=>$date, ':tm'=>$time, ':tp'=>$type, ':a'=>$agentVal]);
         }
-    } catch (Throwable $e) {
-        // If table/columns missing or other DB error, silently ignore — non-critical
-    }
+        } catch (Throwable $e) {
+            // If table/columns missing or other DB error, silently ignore — non-critical
+            return false;
+        }
+    return true;
 }
 
 // Role-based scoping: Agents only see leads assigned to them. Unassigned
@@ -417,7 +429,8 @@ if ($method === 'POST') {
                             $f = $prow['first_name'] ?? '';
                             $l = $prow['last_name'] ?? '';
                             $agent = $prow['assigned_to'] ?? null;
-                            create_calendar_event_for_devis($db, $pid, $f, $l, $agent, $me);
+                            // create per-update (non-forced so we don't duplicate recent events)
+                            create_calendar_event_for_devis($db, $pid, $f, $l, $agent, $me, false);
                         }
                     } catch (Throwable $e) { /* ignore per-row failures */ }
                 }
@@ -441,6 +454,22 @@ if ($method === 'POST') {
             ok(['deleted' => $st->rowCount()]);
         }
         fail('op invalide', 422);
+    }
+
+    if ($action === 'create_devis_events') {
+        require_auth(['Administrateur','Manager']);
+        $created = 0; $skipped = 0;
+        try {
+            $s = $db->query("SELECT id, first_name, last_name, assigned_to FROM extraneterp_prospects WHERE status = 'Devis'");
+            foreach ($s->fetchAll() as $r) {
+                $pid = $r['id'] ?? '';
+                if (!$pid) continue;
+                // force=true => create if no existing event for this prospect
+                $ok = create_calendar_event_for_devis($db, $pid, $r['first_name'] ?? '', $r['last_name'] ?? '', $r['assigned_to'] ?? null, $me, true);
+                if ($ok) $created++; else $skipped++;
+            }
+        } catch (Throwable $e) { fail('Erreur: ' . $e->getMessage(), 500); }
+        ok(['created' => $created, 'skipped' => $skipped]);
     }
 
     // create / upsert
@@ -532,7 +561,7 @@ if ($method === 'POST') {
             $fn = trim($r['firstName'] ?? '');
             $stRow = $r['status'] ?? 'A recontacter (Voir Commentaire)';
             if ($stRow === 'Devis') {
-                create_calendar_event_for_devis($db, $id, $fn, $ln, $assignedTo, $me);
+                create_calendar_event_for_devis($db, $id, $fn, $ln, $assignedTo, $me, false);
             }
         } catch (Throwable $e) { /* ignore event creation failures */ }
 
@@ -645,7 +674,7 @@ if ($method === 'PATCH' || $method === 'PUT') {
             $pstmt = $db->prepare('SELECT first_name, last_name, assigned_to FROM extraneterp_prospects WHERE id = :id');
             $pstmt->execute([':id' => $id]);
             $prow = $pstmt->fetch();
-            if ($prow) create_calendar_event_for_devis($db, $id, $prow['first_name'] ?? '', $prow['last_name'] ?? '', $prow['assigned_to'] ?? null, $me);
+            if ($prow) create_calendar_event_for_devis($db, $id, $prow['first_name'] ?? '', $prow['last_name'] ?? '', $prow['assigned_to'] ?? null, $me, false);
         } catch (Throwable $e) { /* ignore */ }
     }
     ok(['message' => 'Prospect mis à jour']);
