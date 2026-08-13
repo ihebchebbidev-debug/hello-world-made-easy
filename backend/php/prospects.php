@@ -64,8 +64,8 @@ function create_calendar_event_for_devis(PDO $db, string $prospectId, string $fi
             }
         } else {
             if ($hasLink) {
-                $q = $db->prepare("SELECT COUNT(*) FROM extraneterp_calendar_events WHERE prospect_id = :pid AND title LIKE :t AND date >= CURDATE() - INTERVAL 30 DAY");
-                $q->execute([':pid' => $prospectId, ':t' => $title . '%']);
+                $q = $db->prepare("SELECT COUNT(*) FROM extraneterp_calendar_events WHERE prospect_id = :pid AND type = 'devis' AND date >= CURDATE() - INTERVAL 30 DAY");
+                $q->execute([':pid' => $prospectId]);
                 $n = (int)$q->fetchColumn();
                 if ($n > 0) return false;
             } else {
@@ -82,7 +82,8 @@ function create_calendar_event_for_devis(PDO $db, string $prospectId, string $fi
     $id = 'E-' . substr(bin2hex(random_bytes(6)), 0, 8);
     $date = date('Y-m-d');
     $time = '10:00:00';
-    $type = 'rdv';
+    // Use explicit 'devis' event type so Devis are stored and surfaced as Devis
+    $type = 'devis';
 
     try {
         if ($hasLink && $hasOrig) {

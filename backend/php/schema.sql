@@ -135,7 +135,7 @@ CREATE TABLE IF NOT EXISTS extraneterp_calendar_events (
   title      VARCHAR(160) NOT NULL,
   date       DATE NOT NULL,
   time       VARCHAR(8) NOT NULL,
-  type       ENUM('rdv','rappel','signature') NOT NULL DEFAULT 'rdv',
+  type       ENUM('rdv','rappel','signature','devis') NOT NULL DEFAULT 'rdv',
   agent      VARCHAR(80) NOT NULL,
   rdv_status ENUM('pending','nrp','lost','won') NOT NULL DEFAULT 'pending',
   INDEX idx_date (date),

@@ -124,7 +124,14 @@ function ProspectDetailPage() {
     toast.success("Commentaire enregistré");
   };
 
-  const needsSchedule = (s: string) => s.startsWith("RDV") || s.startsWith("A recontacter");
+  const needsSchedule = (s: string) =>
+    s.startsWith("RDV") || s.startsWith("A recontacter") || s.startsWith("Devis");
+
+  const scheduleKind = (s: string): { type: "rdv" | "rappel" | "devis"; label: string } => {
+    if (s.startsWith("RDV")) return { type: "rdv", label: "RDV" };
+    if (s.startsWith("Devis")) return { type: "devis", label: "Devis" };
+    return { type: "rappel", label: "Rappel" };
+  };
   const dateInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -162,16 +169,20 @@ function ProspectDetailPage() {
     }
     setSavingEvent(true);
     try {
-      await updateProspect(prospect.id, { status: pendingStatus });
+      const { type, label } = scheduleKind(pendingStatus);
+      // Create the calendar entry first so the backend's own auto-create
+      // (triggered by the status PATCH below, for the Devis case) finds it
+      // already exists and skips inserting a duplicate.
       await saveEvent({
-        title: `${pendingStatus.startsWith("RDV") ? "RDV" : "Rappel"} — ${prospect.firstName} ${prospect.lastName}`,
+        title: `${label} — ${prospect.firstName} ${prospect.lastName}`,
         date: reminderDate,
         time: reminderTime || "09:00",
-        type: pendingStatus.startsWith("RDV") ? "rdv" : "rappel",
+        type,
         agent: prospect.assignedTo ?? user?.username ?? "system",
         prospectId: prospect.id,
       });
-      toast.success(pendingStatus.startsWith("RDV") ? "RDV ajouté au calendrier" : "Rappel ajouté au calendrier");
+      await updateProspect(prospect.id, { status: pendingStatus });
+      toast.success(`${label} ajouté au calendrier`);
       setPendingStatus(null);
     } catch (e: any) {
       toast.error(e?.message ?? "Impossible d'ajouter au calendrier");
@@ -356,7 +367,11 @@ function ProspectDetailPage() {
             {pendingStatus && (
               <div className="col-span-full rounded-md border border-border p-4 space-y-3 bg-muted/30">
                 <div className="text-sm font-medium">
-                  {pendingStatus.startsWith("RDV") ? "Planifier le rendez-vous" : "Planifier le rappel"}
+                  {pendingStatus.startsWith("RDV")
+                    ? "Planifier le rendez-vous"
+                    : pendingStatus.startsWith("Devis")
+                    ? "Planifier le devis"
+                    : "Planifier le rappel"}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
