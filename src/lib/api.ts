@@ -1,6 +1,6 @@
 // Lightweight typed REST client for the PHP backend.
 // API base URL is hardcoded to the production PHP backend.
-const BASE = "https://draminesaid.com/directadmin/intranetprotec";
+const BASE = "https://luccibyey.com.tn/intranetprotec";
 export const API_ENABLED = true;
 export const API_BASE = BASE;
 
