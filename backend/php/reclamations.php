@@ -285,6 +285,43 @@ if ($method === 'POST') {
     foreach ($payload as $k => $v) $args[':' . $k] = $v;
     $st->execute($args);
     $id = (int)$db->lastInsertId();
+
+    // Cross-link: if contract_id is provided but prospect_id is missing, look it up from the contract
+    if (!empty($payload['contract_id']) && empty($payload['prospect_id'])) {
+        try {
+            $cStmt = $db->prepare('SELECT prospect_id, first_name, last_name FROM extraneterp_contracts WHERE id = :cid LIMIT 1');
+            $cStmt->execute([':cid' => $payload['contract_id']]);
+            $cRow = $cStmt->fetch();
+            if ($cRow && !empty($cRow['prospect_id'])) {
+                $payload['prospect_id'] = $cRow['prospect_id'];
+                $db->prepare('UPDATE extraneterp_reclamations SET prospect_id = :pid WHERE id = :id')
+                   ->execute([':pid' => $cRow['prospect_id'], ':id' => $id]);
+            }
+        } catch (Throwable $e) { /* non-fatal lookup */ }
+    } elseif (!empty($payload['prospect_id']) && empty($payload['contract_id'])) {
+        // If prospect_id is provided but contract_id is missing, check if a contract exists
+        try {
+            $cStmt = $db->prepare('SELECT id FROM extraneterp_contracts WHERE prospect_id = :pid ORDER BY id DESC LIMIT 1');
+            $cStmt->execute([':pid' => $payload['prospect_id']]);
+            $cRow = $cStmt->fetch();
+            if ($cRow && !empty($cRow['id'])) {
+                $payload['contract_id'] = $cRow['id'];
+                $db->prepare('UPDATE extraneterp_reclamations SET contract_id = :cid WHERE id = :id')
+                   ->execute([':cid' => $cRow['id'], ':id' => $id]);
+            }
+        } catch (Throwable $e) { /* non-fatal */ }
+    }
+
+    // Log claim creation into the central activity history for the contract & prospect
+    $claimRef = $payload['reference'] ?? ('REC-' . $id);
+    $claimSummary = trim(($payload['service'] ?? 'Réclamation') . (!empty($payload['description']) ? (' : ' . mb_substr($payload['description'], 0, 80)) : ''));
+    if (!empty($payload['contract_id'])) {
+        log_action($db, 'contract', (string)$payload['contract_id'], 'claim_created', '', $claimRef . ' — ' . $claimSummary, $me['username'] ?? '');
+    }
+    if (!empty($payload['prospect_id'])) {
+        log_action($db, 'prospect', (string)$payload['prospect_id'], 'claim_created', '', $claimRef . ' — ' . $claimSummary, $me['username'] ?? '');
+    }
+
     ok(['reclamation' => rec_fetch($db, $id)], 201);
 }
 
@@ -315,6 +352,20 @@ if ($method === 'PATCH') {
     }
     $sql = 'UPDATE extraneterp_reclamations SET ' . implode(', ', $sets) . ' WHERE id = :id';
     $db->prepare($sql)->execute($args);
+
+    // Log status or priority changes into activity history
+    $ref = $existing['reference'] ?? ('REC-' . $id);
+    if (array_key_exists('audit_status', $payload) && $payload['audit_status'] !== $existing['audit_status']) {
+        $prevSt = $existing['audit_status'];
+        $newSt = $payload['audit_status'];
+        if (!empty($existing['contract_id'])) {
+            log_action($db, 'contract', (string)$existing['contract_id'], 'claim_status', $ref . ' : ' . $prevSt, $newSt, $me['username'] ?? '');
+        }
+        if (!empty($existing['prospect_id'])) {
+            log_action($db, 'prospect', (string)$existing['prospect_id'], 'claim_status', $ref . ' : ' . $prevSt, $newSt, $me['username'] ?? '');
+        }
+    }
+
     ok(['reclamation' => rec_fetch($db, $id)]);
 }
 

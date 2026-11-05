@@ -17,9 +17,13 @@ import { useAuth } from "@/lib/auth";
 import { formatAmount, useCurrency } from "@/lib/currency";
 import { formatDate, formatDateTime } from "@/lib/utils";
 import { exportCSV, exportJSON, exportXLSX, printPage, toContractExportRows } from "@/lib/exportUtils";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AttachmentsCard } from "@/components/AttachmentsCard";
+import { ProspectActivityCard } from "@/components/ProspectActivityCard";
+import { CreateClaimDialog } from "@/components/CreateClaimDialog";
+import { api } from "@/lib/api";
+import { MessageSquareWarning, Plus } from "lucide-react";
 import { CustomFieldsCard } from "@/components/CustomFieldsCard";
 import { Textarea } from "@/components/ui/textarea";
 import { useConfirm } from "@/components/ConfirmDialog";
@@ -38,6 +42,18 @@ export const Route = createFileRoute("/contracts/$contractId/")({
         <h2 className="text-xl font-semibold">Contrat introuvable</h2>
         <Link to="/contracts" className="text-primary text-sm mt-2 inline-block">← Retour aux contrats</Link>
       </div>
+      <CreateClaimDialog
+        open={claimDialogOpen}
+        onOpenChange={setClaimDialogOpen}
+        contractId={contract.id}
+        prospectId={contract.prospectId}
+        defaultClientName={`${contract.firstName} ${contract.lastName}`.trim()}
+        defaultPhone={contract.phone || contract.mobile}
+        onSuccess={() => {
+          void loadClaims();
+          setActivityVersion((v) => v + 1);
+        }}
+      />
     </AppLayout>
   ),
 });
@@ -84,6 +100,24 @@ function ContractDetailsPage() {
   const confirmDialog = useConfirm();
 
   const contract = contracts.find((c) => c.id === contractId);
+
+  const [claimDialogOpen, setClaimDialogOpen] = useState(false);
+  const [claims, setClaims] = useState<any[]>([]);
+  const [activityVersion, setActivityVersion] = useState(0);
+
+  const loadClaims = async () => {
+    if (!contractId) return;
+    try {
+      const res = await api<{ reclamations: any[] }>("/reclamations.php", {
+        query: { contract_id: contractId, limit: "50" },
+      });
+      setClaims(res.reclamations ?? []);
+    } catch { /* non-fatal */ }
+  };
+
+  useEffect(() => {
+    void loadClaims();
+  }, [contractId]);
 
   const validatedBillingStatuses = useMemo(
     () => new Set(billingOptions.filter((o) => o.color === "success").map((o) => o.value)),
@@ -439,6 +473,71 @@ function ContractDetailsPage() {
               </div>
             )}
             <CommentsThread contract={contract} />
+          </Section>
+
+          <Section id="reclamations" title="Réclamations (Claims)" subtitle="Gestion des tickets et réclamations client" plain>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-muted-foreground">{claims.length} réclamation(s) enregistrée(s)</span>
+              <Button size="sm" onClick={() => setClaimDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-1.5" /> Nouvelle réclamation
+              </Button>
+            </div>
+            {claims.length === 0 ? (
+              <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                <MessageSquareWarning className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                Aucune réclamation enregistrée pour ce contrat.
+                <div className="mt-2">
+                  <Button size="sm" variant="outline" onClick={() => setClaimDialogOpen(true)}>
+                    <Plus className="h-3.5 w-3.5 mr-1" /> Ouvrir une réclamation
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border text-left text-muted-foreground">
+                      <th className="py-2 pr-3 font-medium">Référence</th>
+                      <th className="py-2 px-3 font-medium">Service</th>
+                      <th className="py-2 px-3 font-medium">Description</th>
+                      <th className="py-2 px-3 font-medium">Priorité</th>
+                      <th className="py-2 px-3 font-medium">Statut</th>
+                      <th className="py-2 pl-3 font-medium text-right">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border/60">
+                    {claims.map((r) => (
+                      <tr key={r.id} className="hover:bg-muted/40 transition-colors">
+                        <td className="py-2.5 pr-3 font-mono font-medium text-primary">
+                          <Link to="/reclamations/$id" params={{ id: String(r.id) }} className="hover:underline">
+                            {r.reference}
+                          </Link>
+                        </td>
+                        <td className="py-2.5 px-3">{r.service}</td>
+                        <td className="py-2.5 px-3 max-w-[240px] truncate text-muted-foreground">
+                          {r.description || "—"}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className="capitalize">{r.priority}</span>
+                        </td>
+                        <td className="py-2.5 px-3">
+                          <span className={`inline-block text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded border ${
+                            r.audit_status === "resolu" ? "bg-success/10 text-success border-success/20" :
+                            r.audit_status === "annule" ? "bg-destructive/10 text-destructive border-destructive/20" :
+                            "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                          }`}>
+                            {r.audit_status === "resolu" ? "Résolu" : r.audit_status === "annule" ? "Annulé" : "En cours"}
+                          </span>
+                        </td>
+                        <td className="py-2.5 pl-3 text-right text-muted-foreground">
+                          {formatDate(r.date_creation) ?? "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </Section>
 
           <Section id="documents" title="Pièces jointes" subtitle="Documents associés au contrat" plain>

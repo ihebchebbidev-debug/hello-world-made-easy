@@ -21,7 +21,7 @@ export type ProspectActivityEntry = {
 
 const FIELD_LABELS: Record<string, string> = {
   created: "Création",
-  claim: "Réclamation du lead",
+  claim: "Attribution du lead",
   assignedTo: "Agent assigné",
   status: "Statut d'appel",
   outcome: "Résultat",
@@ -52,6 +52,16 @@ const FIELD_LABELS: Record<string, string> = {
   rdv_agent: "Agent du RDV",
   rdv_type: "Type d'événement",
   rdv_title: "Titre du RDV",
+  // Claims / Réclamations
+  claim_created: "Réclamation client (Claim)",
+  claim_status: "Statut réclamation",
+  claim_resolved: "Réclamation résolue",
+  // Contract specific fields
+  billingStatus: "Statut facturation",
+  premium: "Cotisation",
+  attachment_added: "Pièce jointe ajoutée",
+  attachment_removed: "Pièce jointe supprimée",
+  created_from_prospect: "Contrat créé depuis prospect",
 };
 
 function fieldLabel(f: string) {
@@ -59,13 +69,20 @@ function fieldLabel(f: string) {
 }
 
 function fieldTone(f: string): string {
-  if (f === "created" || f === "mark_won" || f === "claim" || f === "rdv_created") return "bg-success";
+  if (f === "created" || f === "mark_won" || f === "rdv_created" || f === "claim_resolved") return "bg-success";
   if (f === "delete" || f === "lostReason" || f === "outcome" || f === "rdv_cancelled") return "bg-destructive";
+  if (f.startsWith("claim_")) return "bg-amber-500";
   if (f === "assignedTo" || f === "status" || f.startsWith("rdv_")) return "bg-info";
   return "bg-primary/70";
 }
 
-export function ProspectActivityCard({ prospectId }: { prospectId: string }) {
+export function ProspectActivityCard({
+  prospectId,
+  contractId,
+}: {
+  prospectId?: string;
+  contractId?: string;
+}) {
   const [entries, setEntries] = useState<ProspectActivityEntry[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,11 +90,20 @@ export function ProspectActivityCard({ prospectId }: { prospectId: string }) {
   const [fieldFilter, setFieldFilter] = useState<string>("all");
 
   const load = async () => {
+    if (!prospectId && !contractId) return;
     setLoading(true);
     setError(null);
     try {
+      const queryParams: Record<string, string> = { limit: "500" };
+      if (contractId) {
+        queryParams.contractId = contractId;
+      } else if (prospectId) {
+        queryParams.entity = "prospect";
+        queryParams.entity_id = prospectId;
+      }
+
       const r = await api<{ activity: ProspectActivityEntry[] }>("/activity.php", {
-        query: { entity: "prospect", entity_id: prospectId, limit: "500" },
+        query: queryParams,
       });
       setEntries(r.activity ?? []);
     } catch (e: any) {
@@ -90,7 +116,7 @@ export function ProspectActivityCard({ prospectId }: { prospectId: string }) {
   useEffect(() => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prospectId]);
+  }, [prospectId, contractId]);
 
   const fieldsPresent = useMemo(() => {
     const set = new Set<string>();

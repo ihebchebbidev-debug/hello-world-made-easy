@@ -15,6 +15,9 @@ import { useAuth } from "@/lib/auth";
 import { AttachmentsCard } from "@/components/AttachmentsCard";
 import { CustomFieldsCard } from "@/components/CustomFieldsCard";
 import { ProspectActivityCard } from "@/components/ProspectActivityCard";
+import { CreateClaimDialog } from "@/components/CreateClaimDialog";
+import { api } from "@/lib/api";
+import { MessageSquareWarning, Plus } from "lucide-react";
 import { formatAmount, useCurrency } from "@/lib/currency";
 import { formatDate } from "@/lib/utils";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -99,7 +102,7 @@ function ProspectDetailPage() {
             <ArrowLeft className="h-4 w-4 mr-1.5" /> Retour
           </Button>
         </div>
-      </AppLayout>
+    </AppLayout>
     );
   }
 
@@ -419,15 +422,13 @@ function ProspectDetailPage() {
             <CustomFieldsCard entity="prospect" entityId={prospect.id} />
           </Section>
 
-          {(user?.role === "Administrateur" || user?.role === "Manager") && (
-            <Section
-              title="Historique complet"
-              subtitle="Audit : qui a fait quoi et quand sur cette fiche"
-              plain
-            >
-              <ProspectActivityCard prospectId={prospect.id} />
-            </Section>
-          )}
+          <Section
+            title="Historique complet"
+            subtitle="Audit : qui a fait quoi et quand sur cette fiche"
+            plain
+          >
+            <ProspectActivityCard prospectId={prospect.id} key={activityVersion} />
+          </Section>
         </div>
 
         {/* Colonne latérale */}
@@ -446,6 +447,43 @@ function ProspectDetailPage() {
               <div className="col-span-full text-sm">{prospect.lostReason}</div>
             </Section>
           )}
+
+          <Section title="Réclamations (Claims)" subtitle="Réclamations associées à cette fiche" plain>
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs text-muted-foreground">{claims.length} réclamation(s)</span>
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setClaimDialogOpen(true)}>
+                <Plus className="h-3.5 w-3.5 mr-1" /> Nouvelle réclamation
+              </Button>
+            </div>
+            {claims.length === 0 ? (
+              <div className="text-sm text-muted-foreground italic">Aucune réclamation enregistrée.</div>
+            ) : (
+              <ul className="divide-y divide-border">
+                {claims.map((r) => (
+                  <li key={r.id} className="py-2.5 flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <Link
+                        to="/reclamations/$id"
+                        params={{ id: String(r.id) }}
+                        className="text-xs font-mono font-medium text-primary hover:underline block"
+                      >
+                        {r.reference}
+                      </Link>
+                      <div className="text-xs text-foreground truncate mt-0.5 font-medium">{r.service}</div>
+                      {r.description && <div className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">{r.description}</div>}
+                    </div>
+                    <span className={`text-[10px] uppercase font-semibold px-1.5 py-0.5 rounded border shrink-0 ${
+                      r.audit_status === "resolu" ? "bg-success/10 text-success border-success/20" :
+                      r.audit_status === "annule" ? "bg-destructive/10 text-destructive border-destructive/20" :
+                      "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                    }`}>
+                      {r.audit_status === "resolu" ? "Résolu" : r.audit_status === "annule" ? "Annulé" : "En cours"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
 
           <Section title="Contrats liés" subtitle="Contrats créés à partir de ce prospect" plain>
             {linkedContracts.length === 0 ? (
