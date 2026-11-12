@@ -62,6 +62,18 @@ const FIELD_LABELS: Record<string, string> = {
   attachment_added: "Pièce jointe ajoutée",
   attachment_removed: "Pièce jointe supprimée",
   created_from_prospect: "Contrat créé depuis prospect",
+  partner: "Partenaire",
+  cabinet: "Cabinet",
+  signatureDate: "Date de signature",
+  effectiveDate: "Date d'effet",
+  validationDate: "Date de validation",
+  commercialComment: "Commentaire commercial",
+  product: "Produit",
+  productOptions: "Options produit",
+  iban: "IBAN",
+  bic: "BIC",
+  adhesionNumber: "N° d'adhésion",
+  ssn: "Sécurité sociale",
 };
 
 function fieldLabel(f: string) {

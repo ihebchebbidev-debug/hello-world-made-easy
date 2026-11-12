@@ -410,6 +410,13 @@ if ($method === 'PATCH' || $method === 'PUT') {
 
     $sql = 'UPDATE extraneterp_contracts SET ' . implode(', ', $sets) . ' WHERE id = :id';
     $db->prepare($sql)->execute($params);
+    foreach ($extMap as $k => $col) {
+        if (!array_key_exists($k, $in)) continue;
+        $prev = (string)($existing[$col] ?? '');
+        $next = (string)($params[":ext_$k"] ?? '');
+        if ($prev === $next) continue;
+        log_action($db, 'contract', $cid, $k, $prev, $next, $me['username'] ?? '');
+    }
     if (!empty($existing['assigned_to']) && $existing['assigned_to'] !== $me['username']) {
         notify_user($db, $existing['assigned_to'], 'Contrat mis à jour', "$cid modifié par {$me['username']}", "/contracts/$cid");
     }
