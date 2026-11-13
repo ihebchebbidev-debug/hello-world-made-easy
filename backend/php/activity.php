@@ -132,6 +132,57 @@ if (!empty($whereParts)) {
 
 $rows = $s->fetchAll();
 
+// Retroactively include existing claims (réclamations) even if created before activity logging was enabled
+if (!empty($prospectIds) || !empty($contractIds)) {
+    try {
+        $recWheres = [];
+        $recParams = [];
+        if (!empty($prospectIds)) {
+            $recWheres[] = 'prospect_id IN (' . implode(',', array_fill(0, count($prospectIds), '?')) . ')';
+            foreach ($prospectIds as $p) $recParams[] = $p;
+        }
+        if (!empty($contractIds)) {
+            $recWheres[] = 'contract_id IN (' . implode(',', array_fill(0, count($contractIds), '?')) . ')';
+            foreach ($contractIds as $c) $recParams[] = $c;
+        }
+        if (!empty($recWheres)) {
+            $recStmt = $db->prepare('SELECT * FROM extraneterp_reclamations WHERE ' . implode(' OR ', $recWheres) . ' ORDER BY date_creation DESC LIMIT 100');
+            $recStmt->execute($recParams);
+            foreach ($recStmt->fetchAll() as $claim) {
+                $ref = $claim['reference'] ?? ('REC-' . $claim['id']);
+                $desc = trim(($claim['service'] ?? 'Réclamation') . (!empty($claim['description']) ? (' : ' . mb_substr($claim['description'], 0, 80)) : ''));
+                $rows[] = [
+                    'id'             => 'REC-LOG-' . $claim['id'],
+                    'entity_type'    => !empty($claim['contract_id']) ? 'contract' : 'prospect',
+                    'entity_id'      => $claim['contract_id'] ?: $claim['prospect_id'],
+                    'contract_id'    => $claim['contract_id'],
+                    'field'          => 'claim_created',
+                    'previous_value' => '',
+                    'new_value'      => $ref . ' — ' . $desc,
+                    'user_username'  => $claim['created_by'] ?: 'system',
+                    'created_at'     => $claim['date_creation'],
+                ];
+                if (($claim['audit_status'] ?? '') === 'resolu' && !empty($claim['date_resolution'])) {
+                    $rows[] = [
+                        'id'             => 'REC-RES-' . $claim['id'],
+                        'entity_type'    => !empty($claim['contract_id']) ? 'contract' : 'prospect',
+                        'entity_id'      => $claim['contract_id'] ?: $claim['prospect_id'],
+                        'contract_id'    => $claim['contract_id'],
+                        'field'          => 'claim_status',
+                        'previous_value' => $ref . ' : en_cours',
+                        'new_value'      => 'resolu',
+                        'user_username'  => $claim['created_by'] ?: 'system',
+                        'created_at'     => $claim['date_resolution'],
+                    ];
+                }
+            }
+        }
+    } catch (Throwable $e) {}
+}
+
+// Sort all rows chronologically descending
+usort($rows, fn($a, $b) => strcmp((string)($b['created_at'] ?? ''), (string)($a['created_at'] ?? '')));
+
 // Deduplicate identical simultaneous action entries (e.g. claim logged to both prospect and contract)
 $seen = [];
 $uniqueRows = [];
