@@ -1,0 +1,1 @@
+function e(e){if(!e)return null;let t=/^(\d{4})-(\d{2})-(\d{2})$/.exec(e);if(!t)return null;let n=Number(t[1]),r=Number(t[2]),i=Number(t[3]),a=new Date(n,r-1,i);if(Number.isNaN(a.getTime()))return null;let o=new Date,s=o.getFullYear()-a.getFullYear(),c=o.getMonth()-a.getMonth();return(c<0||c===0&&o.getDate()<a.getDate())&&s--,s<0||s>130?null:s}export{e as t};

@@ -554,7 +554,7 @@ function ContractDetailsPage() {
           </Section>
 
           <Section id="activite" title="Journal d'activité" subtitle="Historique des changements" plain>
-            <ActivityLogList entries={getContractActivity(contract.id)} />
+            <ProspectActivityCard contractId={contract.id} />
           </Section>
         </div>
       </div>

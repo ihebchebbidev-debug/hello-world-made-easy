@@ -340,20 +340,70 @@ function log_action(
     string $user
 ): void {
     if ($user === '') return;
+
+    $insert = static function (string $type, string $id, ?string $contractId, string $fieldName, $prev, $new, string $username) use ($db): void {
+        try {
+            $s = $db->prepare('INSERT INTO extraneterp_activity_log
+                (id, entity_type, entity_id, contract_id, field, previous_value, new_value, user_username)
+                VALUES (:id, :et, :eid, :cid, :f, :pv, :nv, :u)');
+            $s->execute([
+                ':id'  => 'A-' . substr(bin2hex(random_bytes(8)), 0, 14),
+                ':et'  => substr($type, 0, 32),
+                ':eid' => substr($id, 0, 40),
+                ':cid' => substr((string)($contractId ?? ''), 0, 40),
+                ':f'   => substr($fieldName, 0, 40),
+                ':pv'  => substr((string)($prev ?? ''), 0, 255),
+                ':nv'  => substr((string)($new ?? ''), 0, 255),
+                ':u'   => substr($username, 0, 80),
+            ]);
+        } catch (Throwable $e) { /* best-effort */ }
+    };
+
     try {
-        $s = $db->prepare('INSERT INTO extraneterp_activity_log
-            (id, entity_type, entity_id, contract_id, field, previous_value, new_value, user_username)
-            VALUES (:id, :et, :eid, :cid, :f, :pv, :nv, :u)');
-        $s->execute([
-            ':id'  => 'A-' . substr(bin2hex(random_bytes(8)), 0, 14),
-            ':et'  => substr($entityType, 0, 32),
-            ':eid' => substr($entityId, 0, 40),
-            ':cid' => $entityType === 'contract' ? substr($entityId, 0, 40) : '',
-            ':f'   => substr($field, 0, 40),
-            ':pv'  => substr((string)($previous ?? ''), 0, 255),
-            ':nv'  => substr((string)($next ?? ''), 0, 255),
-            ':u'   => substr($user, 0, 80),
-        ]);
+        $contractId = $entityType === 'contract' ? $entityId : null;
+        $insert($entityType, $entityId, $contractId, $field, $previous, $next, $user);
+
+        // Contract → linked prospect: every contract change is also visible on
+        // the source prospect's complete history.
+        if ($entityType === 'contract') {
+            $c = $db->prepare('SELECT prospect_id FROM extraneterp_contracts WHERE id = :id LIMIT 1');
+            $c->execute([':id' => $entityId]);
+            $prospectId = $c->fetchColumn();
+            if (!$prospectId) {
+                $row = $db->prepare('SELECT last_name, first_name FROM extraneterp_contracts WHERE id = :id LIMIT 1');
+                $row->execute([':id' => $entityId]);
+                $contractRow = $row->fetch();
+                if ($contractRow) {
+                    $p = $db->prepare('SELECT id FROM extraneterp_prospects WHERE LOWER(last_name)=LOWER(:ln) AND LOWER(first_name)=LOWER(:fn) ORDER BY created_at DESC LIMIT 1');
+                    $p->execute([':ln' => $contractRow['last_name'] ?? '', ':fn' => $contractRow['first_name'] ?? '']);
+                    $prospectId = $p->fetchColumn();
+                }
+            }
+            if ($prospectId) {
+                $insert('prospect', (string)$prospectId, $entityId, $field, $previous, $next, $user);
+            }
+        }
+
+        // Prospect → linked contracts: every prospect change is also visible on
+        // all contracts linked directly or matched by the same person.
+        if ($entityType === 'prospect') {
+            $contractRows = $db->prepare('SELECT id FROM extraneterp_contracts WHERE prospect_id = :pid');
+            $contractRows->execute([':pid' => $entityId]);
+            $contractIds = $contractRows->fetchAll(PDO::FETCH_COLUMN);
+
+            $prospectRow = $db->prepare('SELECT last_name, first_name FROM extraneterp_prospects WHERE id = :id LIMIT 1');
+            $prospectRow->execute([':id' => $entityId]);
+            $pRow = $prospectRow->fetch();
+            if ($pRow) {
+                $matched = $db->prepare('SELECT id FROM extraneterp_contracts WHERE LOWER(last_name)=LOWER(:ln) AND LOWER(first_name)=LOWER(:fn)');
+                $matched->execute([':ln' => $pRow['last_name'] ?? '', ':fn' => $pRow['first_name'] ?? '']);
+                $contractIds = array_merge($contractIds, $matched->fetchAll(PDO::FETCH_COLUMN));
+            }
+
+            foreach (array_values(array_unique(array_filter($contractIds))) as $linkedContractId) {
+                $insert('contract', (string)$linkedContractId, (string)$linkedContractId, $field, $previous, $next, $user);
+            }
+        }
     } catch (Throwable $e) { /* best-effort */ }
 }
 

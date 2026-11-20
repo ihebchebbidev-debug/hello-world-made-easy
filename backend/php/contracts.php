@@ -319,15 +319,7 @@ if ($method === 'PATCH' || $method === 'PUT') {
         }
         // log activity
         if ($existing['billing_status'] !== $in['billingStatus']) {
-            $log = $db->prepare('INSERT INTO extraneterp_activity_log (id,entity_type,entity_id,contract_id,field,previous_value,new_value,user_username)
-                                 VALUES (:id,:et,:eid,:cid,:f,:pv,:nv,:u)');
-            $log->execute([
-                ':id'  => 'A-' . substr(bin2hex(random_bytes(6)), 0, 10),
-                ':et'  => 'contract', ':eid' => $cid,
-                ':cid' => $cid, ':f' => 'billingStatus',
-                ':pv'  => $existing['billing_status'], ':nv' => $in['billingStatus'],
-                ':u'   => $me['username'],
-            ]);
+            log_action($db, 'contract', $cid, 'billingStatus', $existing['billing_status'], $in['billingStatus'], $me['username']);
         }
     }
     if (array_key_exists('premium', $in)) {
@@ -335,15 +327,7 @@ if ($method === 'PATCH' || $method === 'PUT') {
         $sets[] = 'premium = :pr';
         $params[':pr'] = $new;
         if ((float)$existing['premium'] !== $new) {
-            $log = $db->prepare('INSERT INTO extraneterp_activity_log (id,entity_type,entity_id,contract_id,field,previous_value,new_value,user_username)
-                                 VALUES (:id,:et,:eid,:cid,:f,:pv,:nv,:u)');
-            $log->execute([
-                ':id'  => 'A-' . substr(bin2hex(random_bytes(6)), 0, 10),
-                ':et'  => 'contract', ':eid' => $cid,
-                ':cid' => $cid, ':f' => 'premium',
-                ':pv'  => (string)$existing['premium'], ':nv' => (string)$new,
-                ':u'   => $me['username'],
-            ]);
+            log_action($db, 'contract', $cid, 'premium', (string)$existing['premium'], (string)$new, $me['username']);
         }
     }
     // Generic update of any of the extended/optional contract fields.
