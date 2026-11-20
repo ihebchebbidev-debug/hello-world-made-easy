@@ -1,1 +1,0 @@
-import{i as e}from"./input-DRKr8jDl.js";var t=e(`chevron-left`,[[`path`,{d:`m15 18-6-6 6-6`,key:`1wnfg3`}]]);export{t};
