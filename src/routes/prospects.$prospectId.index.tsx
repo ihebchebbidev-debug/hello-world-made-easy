@@ -427,7 +427,7 @@ function ProspectDetailPage() {
             subtitle="Audit : qui a fait quoi et quand sur cette fiche"
             plain
           >
-            <ProspectActivityCard prospectId={prospect.id} key={activityVersion} />
+            <ProspectActivityCard prospectId={prospect.id} />
           </Section>
         </div>
 
