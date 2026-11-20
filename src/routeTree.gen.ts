@@ -9,142 +9,52 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as TasksRouteImport } from './routes/tasks'
-import { Route as StagesRouteImport } from './routes/stages'
-import { Route as SignupInternalX7k2RouteImport } from './routes/signup-internal-x7k2'
-import { Route as RolesRouteImport } from './routes/roles'
-import { Route as ReportsRouteImport } from './routes/reports'
-import { Route as ReconciliationRouteImport } from './routes/reconciliation'
-import { Route as ReclamationsRouteImport } from './routes/reclamations'
-import { Route as ProfileRouteImport } from './routes/profile'
-import { Route as OptionsRouteImport } from './routes/options'
-import { Route as ObjectivesRouteImport } from './routes/objectives'
-import { Route as NotificationsRouteImport } from './routes/notifications'
-import { Route as MessagingRouteImport } from './routes/messaging'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as GroupsRouteImport } from './routes/groups'
-import { Route as EmailsRouteImport } from './routes/emails'
-import { Route as DocumentationRouteImport } from './routes/documentation'
-import { Route as DispatchRouteImport } from './routes/dispatch'
-import { Route as ConfigurationRouteImport } from './routes/configuration'
-import { Route as CalendarRouteImport } from './routes/calendar'
-import { Route as BackofficeRouteImport } from './routes/backoffice'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as UsersIndexRouteImport } from './routes/users.index'
-import { Route as ProspectsIndexRouteImport } from './routes/prospects.index'
+import { Route as BackofficeRouteImport } from './routes/backoffice'
+import { Route as CalendarRouteImport } from './routes/calendar'
+import { Route as ConfigurationRouteImport } from './routes/configuration'
+import { Route as DispatchRouteImport } from './routes/dispatch'
+import { Route as DocumentationRouteImport } from './routes/documentation'
+import { Route as EmailsRouteImport } from './routes/emails'
+import { Route as GroupsRouteImport } from './routes/groups'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as MessagingRouteImport } from './routes/messaging'
+import { Route as NotificationsRouteImport } from './routes/notifications'
+import { Route as ObjectivesRouteImport } from './routes/objectives'
+import { Route as OptionsRouteImport } from './routes/options'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as ReclamationsRouteImport } from './routes/reclamations'
+import { Route as ReconciliationRouteImport } from './routes/reconciliation'
+import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as RolesRouteImport } from './routes/roles'
+import { Route as SignupInternalX7k2RouteImport } from './routes/signup-internal-x7k2'
+import { Route as StagesRouteImport } from './routes/stages'
+import { Route as TasksRouteImport } from './routes/tasks'
 import { Route as ContractsIndexRouteImport } from './routes/contracts.index'
-import { Route as UsersNewRouteImport } from './routes/users.new'
-import { Route as UsersImportRouteImport } from './routes/users.import'
-import { Route as StatusesProspectsRouteImport } from './routes/statuses.prospects'
-import { Route as StatusesContractsRouteImport } from './routes/statuses.contracts'
-import { Route as ReclamationsIdRouteImport } from './routes/reclamations.$id'
-import { Route as ProspectsNewRouteImport } from './routes/prospects.new'
-import { Route as ProspectsImportRouteImport } from './routes/prospects.import'
-import { Route as ProspectsExportRouteImport } from './routes/prospects.export'
-import { Route as ContractsNewRouteImport } from './routes/contracts.new'
-import { Route as ContractsImportRouteImport } from './routes/contracts.import'
 import { Route as ContractsExportRouteImport } from './routes/contracts.export'
-import { Route as UsersUsernameIndexRouteImport } from './routes/users.$username.index'
-import { Route as ProspectsProspectIdIndexRouteImport } from './routes/prospects.$prospectId.index'
+import { Route as ContractsImportRouteImport } from './routes/contracts.import'
+import { Route as ContractsNewRouteImport } from './routes/contracts.new'
+import { Route as ProspectsIndexRouteImport } from './routes/prospects.index'
+import { Route as ProspectsExportRouteImport } from './routes/prospects.export'
+import { Route as ProspectsImportRouteImport } from './routes/prospects.import'
+import { Route as ProspectsNewRouteImport } from './routes/prospects.new'
+import { Route as ReclamationsIdRouteImport } from './routes/reclamations.$id'
+import { Route as StatusesContractsRouteImport } from './routes/statuses.contracts'
+import { Route as StatusesProspectsRouteImport } from './routes/statuses.prospects'
+import { Route as UsersIndexRouteImport } from './routes/users.index'
+import { Route as UsersImportRouteImport } from './routes/users.import'
+import { Route as UsersNewRouteImport } from './routes/users.new'
 import { Route as ContractsContractIdIndexRouteImport } from './routes/contracts.$contractId.index'
-import { Route as UsersUsernameResetPasswordRouteImport } from './routes/users.$username.reset-password'
-import { Route as UsersUsernameEditRouteImport } from './routes/users.$username.edit'
-import { Route as ProspectsProspectIdEditRouteImport } from './routes/prospects.$prospectId.edit'
 import { Route as ContractsContractIdEditRouteImport } from './routes/contracts.$contractId.edit'
+import { Route as ProspectsProspectIdIndexRouteImport } from './routes/prospects.$prospectId.index'
+import { Route as ProspectsProspectIdEditRouteImport } from './routes/prospects.$prospectId.edit'
+import { Route as UsersUsernameIndexRouteImport } from './routes/users.$username.index'
+import { Route as UsersUsernameEditRouteImport } from './routes/users.$username.edit'
+import { Route as UsersUsernameResetPasswordRouteImport } from './routes/users.$username.reset-password'
 
-const TasksRoute = TasksRouteImport.update({
-  id: '/tasks',
-  path: '/tasks',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StagesRoute = StagesRouteImport.update({
-  id: '/stages',
-  path: '/stages',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SignupInternalX7k2Route = SignupInternalX7k2RouteImport.update({
-  id: '/signup-internal-x7k2',
-  path: '/signup-internal-x7k2',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RolesRoute = RolesRouteImport.update({
-  id: '/roles',
-  path: '/roles',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReportsRoute = ReportsRouteImport.update({
-  id: '/reports',
-  path: '/reports',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReconciliationRoute = ReconciliationRouteImport.update({
-  id: '/reconciliation',
-  path: '/reconciliation',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReclamationsRoute = ReclamationsRouteImport.update({
-  id: '/reclamations',
-  path: '/reclamations',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProfileRoute = ProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OptionsRoute = OptionsRouteImport.update({
-  id: '/options',
-  path: '/options',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ObjectivesRoute = ObjectivesRouteImport.update({
-  id: '/objectives',
-  path: '/objectives',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NotificationsRoute = NotificationsRouteImport.update({
-  id: '/notifications',
-  path: '/notifications',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const MessagingRoute = MessagingRouteImport.update({
-  id: '/messaging',
-  path: '/messaging',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GroupsRoute = GroupsRouteImport.update({
-  id: '/groups',
-  path: '/groups',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EmailsRoute = EmailsRouteImport.update({
-  id: '/emails',
-  path: '/emails',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DocumentationRoute = DocumentationRouteImport.update({
-  id: '/documentation',
-  path: '/documentation',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DispatchRoute = DispatchRouteImport.update({
-  id: '/dispatch',
-  path: '/dispatch',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConfigurationRoute = ConfigurationRouteImport.update({
-  id: '/configuration',
-  path: '/configuration',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const CalendarRoute = CalendarRouteImport.update({
-  id: '/calendar',
-  path: '/calendar',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BackofficeRoute = BackofficeRouteImport.update({
@@ -152,19 +62,99 @@ const BackofficeRoute = BackofficeRouteImport.update({
   path: '/backoffice',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const CalendarRoute = CalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UsersIndexRoute = UsersIndexRouteImport.update({
-  id: '/users/',
-  path: '/users/',
+const ConfigurationRoute = ConfigurationRouteImport.update({
+  id: '/configuration',
+  path: '/configuration',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProspectsIndexRoute = ProspectsIndexRouteImport.update({
-  id: '/prospects/',
-  path: '/prospects/',
+const DispatchRoute = DispatchRouteImport.update({
+  id: '/dispatch',
+  path: '/dispatch',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DocumentationRoute = DocumentationRouteImport.update({
+  id: '/documentation',
+  path: '/documentation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmailsRoute = EmailsRouteImport.update({
+  id: '/emails',
+  path: '/emails',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GroupsRoute = GroupsRouteImport.update({
+  id: '/groups',
+  path: '/groups',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MessagingRoute = MessagingRouteImport.update({
+  id: '/messaging',
+  path: '/messaging',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ObjectivesRoute = ObjectivesRouteImport.update({
+  id: '/objectives',
+  path: '/objectives',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OptionsRoute = OptionsRouteImport.update({
+  id: '/options',
+  path: '/options',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReclamationsRoute = ReclamationsRouteImport.update({
+  id: '/reclamations',
+  path: '/reclamations',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReconciliationRoute = ReconciliationRouteImport.update({
+  id: '/reconciliation',
+  path: '/reconciliation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReportsRoute = ReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RolesRoute = RolesRouteImport.update({
+  id: '/roles',
+  path: '/roles',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupInternalX7k2Route = SignupInternalX7k2RouteImport.update({
+  id: '/signup-internal-x7k2',
+  path: '/signup-internal-x7k2',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StagesRoute = StagesRouteImport.update({
+  id: '/stages',
+  path: '/stages',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TasksRoute = TasksRouteImport.update({
+  id: '/tasks',
+  path: '/tasks',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContractsIndexRoute = ContractsIndexRouteImport.update({
@@ -172,49 +162,9 @@ const ContractsIndexRoute = ContractsIndexRouteImport.update({
   path: '/contracts/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UsersNewRoute = UsersNewRouteImport.update({
-  id: '/users/new',
-  path: '/users/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const UsersImportRoute = UsersImportRouteImport.update({
-  id: '/users/import',
-  path: '/users/import',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StatusesProspectsRoute = StatusesProspectsRouteImport.update({
-  id: '/statuses/prospects',
-  path: '/statuses/prospects',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StatusesContractsRoute = StatusesContractsRouteImport.update({
-  id: '/statuses/contracts',
-  path: '/statuses/contracts',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ReclamationsIdRoute = ReclamationsIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => ReclamationsRoute,
-} as any)
-const ProspectsNewRoute = ProspectsNewRouteImport.update({
-  id: '/prospects/new',
-  path: '/prospects/new',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProspectsImportRoute = ProspectsImportRouteImport.update({
-  id: '/prospects/import',
-  path: '/prospects/import',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProspectsExportRoute = ProspectsExportRouteImport.update({
-  id: '/prospects/export',
-  path: '/prospects/export',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContractsNewRoute = ContractsNewRouteImport.update({
-  id: '/contracts/new',
-  path: '/contracts/new',
+const ContractsExportRoute = ContractsExportRouteImport.update({
+  id: '/contracts/export',
+  path: '/contracts/export',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContractsImportRoute = ContractsImportRouteImport.update({
@@ -222,14 +172,70 @@ const ContractsImportRoute = ContractsImportRouteImport.update({
   path: '/contracts/import',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ContractsExportRoute = ContractsExportRouteImport.update({
-  id: '/contracts/export',
-  path: '/contracts/export',
+const ContractsNewRoute = ContractsNewRouteImport.update({
+  id: '/contracts/new',
+  path: '/contracts/new',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UsersUsernameIndexRoute = UsersUsernameIndexRouteImport.update({
-  id: '/users/$username/',
-  path: '/users/$username/',
+const ProspectsIndexRoute = ProspectsIndexRouteImport.update({
+  id: '/prospects/',
+  path: '/prospects/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProspectsExportRoute = ProspectsExportRouteImport.update({
+  id: '/prospects/export',
+  path: '/prospects/export',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProspectsImportRoute = ProspectsImportRouteImport.update({
+  id: '/prospects/import',
+  path: '/prospects/import',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProspectsNewRoute = ProspectsNewRouteImport.update({
+  id: '/prospects/new',
+  path: '/prospects/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReclamationsIdRoute = ReclamationsIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ReclamationsRoute,
+} as any)
+const StatusesContractsRoute = StatusesContractsRouteImport.update({
+  id: '/statuses/contracts',
+  path: '/statuses/contracts',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StatusesProspectsRoute = StatusesProspectsRouteImport.update({
+  id: '/statuses/prospects',
+  path: '/statuses/prospects',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsersIndexRoute = UsersIndexRouteImport.update({
+  id: '/users/',
+  path: '/users/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsersImportRoute = UsersImportRouteImport.update({
+  id: '/users/import',
+  path: '/users/import',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsersNewRoute = UsersNewRouteImport.update({
+  id: '/users/new',
+  path: '/users/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ContractsContractIdIndexRoute =
+  ContractsContractIdIndexRouteImport.update({
+    id: '/contracts/$contractId/',
+    path: '/contracts/$contractId/',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ContractsContractIdEditRoute = ContractsContractIdEditRouteImport.update({
+  id: '/contracts/$contractId/edit',
+  path: '/contracts/$contractId/edit',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProspectsProspectIdIndexRoute =
@@ -238,33 +244,27 @@ const ProspectsProspectIdIndexRoute =
     path: '/prospects/$prospectId/',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ContractsContractIdIndexRoute =
-  ContractsContractIdIndexRouteImport.update({
-    id: '/contracts/$contractId/',
-    path: '/contracts/$contractId/',
-    getParentRoute: () => rootRouteImport,
-  } as any)
+const ProspectsProspectIdEditRoute = ProspectsProspectIdEditRouteImport.update({
+  id: '/prospects/$prospectId/edit',
+  path: '/prospects/$prospectId/edit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsersUsernameIndexRoute = UsersUsernameIndexRouteImport.update({
+  id: '/users/$username/',
+  path: '/users/$username/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsersUsernameEditRoute = UsersUsernameEditRouteImport.update({
+  id: '/users/$username/edit',
+  path: '/users/$username/edit',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UsersUsernameResetPasswordRoute =
   UsersUsernameResetPasswordRouteImport.update({
     id: '/users/$username/reset-password',
     path: '/users/$username/reset-password',
     getParentRoute: () => rootRouteImport,
   } as any)
-const UsersUsernameEditRoute = UsersUsernameEditRouteImport.update({
-  id: '/users/$username/edit',
-  path: '/users/$username/edit',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProspectsProspectIdEditRoute = ProspectsProspectIdEditRouteImport.update({
-  id: '/prospects/$prospectId/edit',
-  path: '/prospects/$prospectId/edit',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ContractsContractIdEditRoute = ContractsContractIdEditRouteImport.update({
-  id: '/contracts/$contractId/edit',
-  path: '/contracts/$contractId/edit',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -580,137 +580,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/tasks': {
-      id: '/tasks'
-      path: '/tasks'
-      fullPath: '/tasks'
-      preLoaderRoute: typeof TasksRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/stages': {
-      id: '/stages'
-      path: '/stages'
-      fullPath: '/stages'
-      preLoaderRoute: typeof StagesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/signup-internal-x7k2': {
-      id: '/signup-internal-x7k2'
-      path: '/signup-internal-x7k2'
-      fullPath: '/signup-internal-x7k2'
-      preLoaderRoute: typeof SignupInternalX7k2RouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/roles': {
-      id: '/roles'
-      path: '/roles'
-      fullPath: '/roles'
-      preLoaderRoute: typeof RolesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reports': {
-      id: '/reports'
-      path: '/reports'
-      fullPath: '/reports'
-      preLoaderRoute: typeof ReportsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reconciliation': {
-      id: '/reconciliation'
-      path: '/reconciliation'
-      fullPath: '/reconciliation'
-      preLoaderRoute: typeof ReconciliationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reclamations': {
-      id: '/reclamations'
-      path: '/reclamations'
-      fullPath: '/reclamations'
-      preLoaderRoute: typeof ReclamationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/options': {
-      id: '/options'
-      path: '/options'
-      fullPath: '/options'
-      preLoaderRoute: typeof OptionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/objectives': {
-      id: '/objectives'
-      path: '/objectives'
-      fullPath: '/objectives'
-      preLoaderRoute: typeof ObjectivesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/notifications': {
-      id: '/notifications'
-      path: '/notifications'
-      fullPath: '/notifications'
-      preLoaderRoute: typeof NotificationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/messaging': {
-      id: '/messaging'
-      path: '/messaging'
-      fullPath: '/messaging'
-      preLoaderRoute: typeof MessagingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/groups': {
-      id: '/groups'
-      path: '/groups'
-      fullPath: '/groups'
-      preLoaderRoute: typeof GroupsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/emails': {
-      id: '/emails'
-      path: '/emails'
-      fullPath: '/emails'
-      preLoaderRoute: typeof EmailsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/documentation': {
-      id: '/documentation'
-      path: '/documentation'
-      fullPath: '/documentation'
-      preLoaderRoute: typeof DocumentationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dispatch': {
-      id: '/dispatch'
-      path: '/dispatch'
-      fullPath: '/dispatch'
-      preLoaderRoute: typeof DispatchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/configuration': {
-      id: '/configuration'
-      path: '/configuration'
-      fullPath: '/configuration'
-      preLoaderRoute: typeof ConfigurationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/calendar': {
-      id: '/calendar'
-      path: '/calendar'
-      fullPath: '/calendar'
-      preLoaderRoute: typeof CalendarRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/backoffice': {
@@ -720,25 +594,137 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BackofficeRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/calendar': {
+      id: '/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof CalendarRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/users/': {
-      id: '/users/'
-      path: '/users'
-      fullPath: '/users/'
-      preLoaderRoute: typeof UsersIndexRouteImport
+    '/configuration': {
+      id: '/configuration'
+      path: '/configuration'
+      fullPath: '/configuration'
+      preLoaderRoute: typeof ConfigurationRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/prospects/': {
-      id: '/prospects/'
-      path: '/prospects'
-      fullPath: '/prospects/'
-      preLoaderRoute: typeof ProspectsIndexRouteImport
+    '/dispatch': {
+      id: '/dispatch'
+      path: '/dispatch'
+      fullPath: '/dispatch'
+      preLoaderRoute: typeof DispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/documentation': {
+      id: '/documentation'
+      path: '/documentation'
+      fullPath: '/documentation'
+      preLoaderRoute: typeof DocumentationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/emails': {
+      id: '/emails'
+      path: '/emails'
+      fullPath: '/emails'
+      preLoaderRoute: typeof EmailsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/groups': {
+      id: '/groups'
+      path: '/groups'
+      fullPath: '/groups'
+      preLoaderRoute: typeof GroupsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/messaging': {
+      id: '/messaging'
+      path: '/messaging'
+      fullPath: '/messaging'
+      preLoaderRoute: typeof MessagingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/objectives': {
+      id: '/objectives'
+      path: '/objectives'
+      fullPath: '/objectives'
+      preLoaderRoute: typeof ObjectivesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/options': {
+      id: '/options'
+      path: '/options'
+      fullPath: '/options'
+      preLoaderRoute: typeof OptionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reclamations': {
+      id: '/reclamations'
+      path: '/reclamations'
+      fullPath: '/reclamations'
+      preLoaderRoute: typeof ReclamationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reconciliation': {
+      id: '/reconciliation'
+      path: '/reconciliation'
+      fullPath: '/reconciliation'
+      preLoaderRoute: typeof ReconciliationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reports': {
+      id: '/reports'
+      path: '/reports'
+      fullPath: '/reports'
+      preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/roles': {
+      id: '/roles'
+      path: '/roles'
+      fullPath: '/roles'
+      preLoaderRoute: typeof RolesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup-internal-x7k2': {
+      id: '/signup-internal-x7k2'
+      path: '/signup-internal-x7k2'
+      fullPath: '/signup-internal-x7k2'
+      preLoaderRoute: typeof SignupInternalX7k2RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stages': {
+      id: '/stages'
+      path: '/stages'
+      fullPath: '/stages'
+      preLoaderRoute: typeof StagesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tasks': {
+      id: '/tasks'
+      path: '/tasks'
+      fullPath: '/tasks'
+      preLoaderRoute: typeof TasksRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contracts/': {
@@ -748,67 +734,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContractsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/users/new': {
-      id: '/users/new'
-      path: '/users/new'
-      fullPath: '/users/new'
-      preLoaderRoute: typeof UsersNewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/users/import': {
-      id: '/users/import'
-      path: '/users/import'
-      fullPath: '/users/import'
-      preLoaderRoute: typeof UsersImportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/statuses/prospects': {
-      id: '/statuses/prospects'
-      path: '/statuses/prospects'
-      fullPath: '/statuses/prospects'
-      preLoaderRoute: typeof StatusesProspectsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/statuses/contracts': {
-      id: '/statuses/contracts'
-      path: '/statuses/contracts'
-      fullPath: '/statuses/contracts'
-      preLoaderRoute: typeof StatusesContractsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/reclamations/$id': {
-      id: '/reclamations/$id'
-      path: '/$id'
-      fullPath: '/reclamations/$id'
-      preLoaderRoute: typeof ReclamationsIdRouteImport
-      parentRoute: typeof ReclamationsRoute
-    }
-    '/prospects/new': {
-      id: '/prospects/new'
-      path: '/prospects/new'
-      fullPath: '/prospects/new'
-      preLoaderRoute: typeof ProspectsNewRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/prospects/import': {
-      id: '/prospects/import'
-      path: '/prospects/import'
-      fullPath: '/prospects/import'
-      preLoaderRoute: typeof ProspectsImportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/prospects/export': {
-      id: '/prospects/export'
-      path: '/prospects/export'
-      fullPath: '/prospects/export'
-      preLoaderRoute: typeof ProspectsExportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/contracts/new': {
-      id: '/contracts/new'
-      path: '/contracts/new'
-      fullPath: '/contracts/new'
-      preLoaderRoute: typeof ContractsNewRouteImport
+    '/contracts/export': {
+      id: '/contracts/export'
+      path: '/contracts/export'
+      fullPath: '/contracts/export'
+      preLoaderRoute: typeof ContractsExportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contracts/import': {
@@ -818,25 +748,81 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContractsImportRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/contracts/export': {
-      id: '/contracts/export'
-      path: '/contracts/export'
-      fullPath: '/contracts/export'
-      preLoaderRoute: typeof ContractsExportRouteImport
+    '/contracts/new': {
+      id: '/contracts/new'
+      path: '/contracts/new'
+      fullPath: '/contracts/new'
+      preLoaderRoute: typeof ContractsNewRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/users/$username/': {
-      id: '/users/$username/'
-      path: '/users/$username'
-      fullPath: '/users/$username/'
-      preLoaderRoute: typeof UsersUsernameIndexRouteImport
+    '/prospects/': {
+      id: '/prospects/'
+      path: '/prospects'
+      fullPath: '/prospects/'
+      preLoaderRoute: typeof ProspectsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/prospects/$prospectId/': {
-      id: '/prospects/$prospectId/'
-      path: '/prospects/$prospectId'
-      fullPath: '/prospects/$prospectId/'
-      preLoaderRoute: typeof ProspectsProspectIdIndexRouteImport
+    '/prospects/export': {
+      id: '/prospects/export'
+      path: '/prospects/export'
+      fullPath: '/prospects/export'
+      preLoaderRoute: typeof ProspectsExportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/prospects/import': {
+      id: '/prospects/import'
+      path: '/prospects/import'
+      fullPath: '/prospects/import'
+      preLoaderRoute: typeof ProspectsImportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/prospects/new': {
+      id: '/prospects/new'
+      path: '/prospects/new'
+      fullPath: '/prospects/new'
+      preLoaderRoute: typeof ProspectsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reclamations/$id': {
+      id: '/reclamations/$id'
+      path: '/$id'
+      fullPath: '/reclamations/$id'
+      preLoaderRoute: typeof ReclamationsIdRouteImport
+      parentRoute: typeof ReclamationsRoute
+    }
+    '/statuses/contracts': {
+      id: '/statuses/contracts'
+      path: '/statuses/contracts'
+      fullPath: '/statuses/contracts'
+      preLoaderRoute: typeof StatusesContractsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/statuses/prospects': {
+      id: '/statuses/prospects'
+      path: '/statuses/prospects'
+      fullPath: '/statuses/prospects'
+      preLoaderRoute: typeof StatusesProspectsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/users/': {
+      id: '/users/'
+      path: '/users'
+      fullPath: '/users/'
+      preLoaderRoute: typeof UsersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/users/import': {
+      id: '/users/import'
+      path: '/users/import'
+      fullPath: '/users/import'
+      preLoaderRoute: typeof UsersImportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/users/new': {
+      id: '/users/new'
+      path: '/users/new'
+      fullPath: '/users/new'
+      preLoaderRoute: typeof UsersNewRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contracts/$contractId/': {
@@ -846,18 +832,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContractsContractIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/users/$username/reset-password': {
-      id: '/users/$username/reset-password'
-      path: '/users/$username/reset-password'
-      fullPath: '/users/$username/reset-password'
-      preLoaderRoute: typeof UsersUsernameResetPasswordRouteImport
+    '/contracts/$contractId/edit': {
+      id: '/contracts/$contractId/edit'
+      path: '/contracts/$contractId/edit'
+      fullPath: '/contracts/$contractId/edit'
+      preLoaderRoute: typeof ContractsContractIdEditRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/users/$username/edit': {
-      id: '/users/$username/edit'
-      path: '/users/$username/edit'
-      fullPath: '/users/$username/edit'
-      preLoaderRoute: typeof UsersUsernameEditRouteImport
+    '/prospects/$prospectId/': {
+      id: '/prospects/$prospectId/'
+      path: '/prospects/$prospectId'
+      fullPath: '/prospects/$prospectId/'
+      preLoaderRoute: typeof ProspectsProspectIdIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/prospects/$prospectId/edit': {
@@ -867,11 +853,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProspectsProspectIdEditRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/contracts/$contractId/edit': {
-      id: '/contracts/$contractId/edit'
-      path: '/contracts/$contractId/edit'
-      fullPath: '/contracts/$contractId/edit'
-      preLoaderRoute: typeof ContractsContractIdEditRouteImport
+    '/users/$username/': {
+      id: '/users/$username/'
+      path: '/users/$username'
+      fullPath: '/users/$username/'
+      preLoaderRoute: typeof UsersUsernameIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/users/$username/edit': {
+      id: '/users/$username/edit'
+      path: '/users/$username/edit'
+      fullPath: '/users/$username/edit'
+      preLoaderRoute: typeof UsersUsernameEditRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/users/$username/reset-password': {
+      id: '/users/$username/reset-password'
+      path: '/users/$username/reset-password'
+      fullPath: '/users/$username/reset-password'
+      preLoaderRoute: typeof UsersUsernameResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
