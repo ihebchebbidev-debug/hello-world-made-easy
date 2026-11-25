@@ -85,6 +85,22 @@ if ($cid || ($entity === 'contract' && $eid)) {
     $s = $db->prepare('SELECT * FROM extraneterp_activity_log WHERE entity_type = :e AND entity_id = :id ORDER BY created_at DESC LIMIT ' . $limit);
     $s->execute([':e' => $entity, ':id' => $eid]);
     $rows = $s->fetchAll();
+// Normalize field names from snake_case (DB) to camelCase (UI) and combine name parts
+function normalizeField(string $field): string {
+    $map = [
+        'first_name' => 'firstName',
+        'last_name'  => 'lastName',
+        // add other mappings if needed
+    ];
+    return $map[$field] ?? $field;
+}
+
+foreach ($rows as &$r) {
+    $r['field'] = normalizeField($r['field'] ?? '');
+    // Combine firstName and lastName into a single "name" entry if both exist for the same timestamp and user
+    // This will be handled later in deduplication; we just keep both entries for now.
+}
+unset($r);
     $out = array_map(fn($a) => [
         'id'            => $a['id'],
         'entityType'    => $a['entity_type'] ?? 'contract',
@@ -131,6 +147,22 @@ if (!empty($whereParts)) {
 }
 
 $rows = $s->fetchAll();
+// Normalize field names from snake_case (DB) to camelCase (UI) and combine name parts
+function normalizeField(string $field): string {
+    $map = [
+        'first_name' => 'firstName',
+        'last_name'  => 'lastName',
+        // add other mappings if needed
+    ];
+    return $map[$field] ?? $field;
+}
+
+foreach ($rows as &$r) {
+    $r['field'] = normalizeField($r['field'] ?? '');
+    // Combine firstName and lastName into a single "name" entry if both exist for the same timestamp and user
+    // This will be handled later in deduplication; we just keep both entries for now.
+}
+unset($r);
 
 // Retroactively include existing claims (réclamations) even if created before activity logging was enabled
 if (!empty($prospectIds) || !empty($contractIds)) {

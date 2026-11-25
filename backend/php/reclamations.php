@@ -352,6 +352,20 @@ if ($method === 'PATCH') {
     }
     $sql = 'UPDATE extraneterp_reclamations SET ' . implode(', ', $sets) . ' WHERE id = :id';
     $db->prepare($sql)->execute($args);
+        // Log each field change into the activity log for contract and prospect
+        foreach ($payload as $field => $newVal) {
+            // Skip audit_status because it is logged separately above
+            if ($field === 'audit_status') continue;
+            $oldVal = $existing[$field] ?? null;
+            if ($oldVal === $newVal) continue;
+            $ref = $existing['reference'] ?? ('REC-' . $id);
+            if (!empty($existing['contract_id'])) {
+                log_action($db, 'contract', (string)$existing['contract_id'], $field, $oldVal, $newVal, $me['username'] ?? '');
+            }
+            if (!empty($existing['prospect_id'])) {
+                log_action($db, 'prospect', (string)$existing['prospect_id'], $field, $oldVal, $newVal, $me['username'] ?? '');
+            }
+        }
 
     // Log status or priority changes into activity history
     $ref = $existing['reference'] ?? ('REC-' . $id);
