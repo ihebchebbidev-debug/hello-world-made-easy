@@ -12,6 +12,7 @@ import {
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 import { MessageSquareWarning } from "lucide-react";
+import { normalizePhone } from "@/lib/usePhoneInput";
 
 const SERVICES = ["Technique", "Facturation", "Commercial", "Autre"] as const;
 type Service = (typeof SERVICES)[number];
@@ -165,9 +166,11 @@ export function CreateClaimDialog({
                 <Label className="text-xs">Téléphone / Mobile</Label>
                 <Input
                   value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="06..."
+                  onChange={(e) => setPhone(normalizePhone(e.target.value))}
+                  placeholder="9 chiffres sans 0 (ex: 612345678)"
                   className="h-9"
+                  inputMode="numeric"
+                  maxLength={9}
                 />
               </div>
             </div>

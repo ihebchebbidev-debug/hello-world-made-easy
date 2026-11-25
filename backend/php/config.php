@@ -513,3 +513,22 @@ function client_ip(): string {
     if (strpos($ip, ',') !== false) $ip = trim(explode(',', $ip)[0]);
     return substr($ip, 0, 64);
 }
+
+/**
+ * Normalise un numéro de téléphone : supprime les espaces, tirets, points,
+ * parenthèses, retire le zéro initial, puis vérifie qu'il reste exactement
+ * 9 chiffres. Renvoie la chaîne normalisée ou null si invalide / vide.
+ */
+function clean_phone(?string $raw): ?string {
+    if ($raw === null || trim($raw) === '') return null;
+    // Supprimer tout ce qui n'est pas chiffre
+    $num = preg_replace('/\D+/', '', $raw);
+    // Retirer le zéro (ou les zéros) initial(aux)
+    $num = ltrim($num, '0');
+    // Doit contenir exactement 9 chiffres
+    if (preg_match('/^\d{9}$/', $num)) {
+        return $num;
+    }
+    // Format invalide : on renvoie null plutôt que de stocker des données incorrectes
+    return null;
+}

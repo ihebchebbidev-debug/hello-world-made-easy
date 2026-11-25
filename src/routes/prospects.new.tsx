@@ -20,6 +20,7 @@ import { useAuth } from "@/lib/auth";
 import { useOptionList } from "@/lib/useOptionList";
 import { useStatusOptions } from "@/lib/useStatusOptions";
 import { ageFromBirthDate } from "@/lib/age";
+import { usePhoneInput } from "@/lib/usePhoneInput";
 
 export const Route = createFileRoute("/prospects/new")({
   head: () => ({
@@ -46,8 +47,8 @@ function NewProspectPage() {
   const [civility, setCivility] = useState<"M" | "Mme">("M");
   const [lastName, setLastName] = useState("");
   const [firstName, setFirstName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [mobile, setMobile] = useState("");
+  const [phone, handlePhone] = usePhoneInput("");
+  const [mobile, handleMobile] = usePhoneInput("");
   const [email, setEmail] = useState("");
   const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
@@ -220,8 +221,8 @@ function NewProspectPage() {
             </div>
             <div className="space-y-1.5"><Label>Nom *</Label><Input value={lastName} onChange={(e) => setLastName(e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Prénom *</Label><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Téléphone (fixe)</Label><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Mobile / GSM</Label><Input value={mobile} onChange={(e) => setMobile(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Téléphone (fixe)</Label><Input value={phone} onChange={handlePhone} placeholder="9 chiffres sans 0 (ex: 612345678)" inputMode="numeric" maxLength={9} /></div>
+            <div className="space-y-1.5"><Label>Mobile / GSM</Label><Input value={mobile} onChange={handleMobile} placeholder="9 chiffres sans 0 (ex: 612345678)" inputMode="numeric" maxLength={9} /></div>
             <div className="space-y-1.5"><Label>Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
             <div className="space-y-1.5 sm:col-span-2 lg:col-span-3"><Label>Adresse</Label><Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="N°, rue, complément…" /></div>
             <div className="space-y-1.5"><Label>Ville</Label><Input value={city} onChange={(e) => setCity(e.target.value)} /></div>

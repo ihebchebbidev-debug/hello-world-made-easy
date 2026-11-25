@@ -18,6 +18,7 @@ import { useOptionList } from "@/lib/useOptionList";
 import { useStatusOptions } from "@/lib/useStatusOptions";
 import { toast } from "sonner";
 import { CustomFieldsInline, validateRequiredCustomValues } from "./CustomFieldsInline";
+import { normalizePhone } from "@/lib/usePhoneInput";
 
 export function NewProspectDialog() {
   const { importProspects, users, saveEvent } = useErp();
@@ -174,7 +175,13 @@ export function NewProspectDialog() {
           </div>
           <div className="space-y-1.5">
             <Label>Téléphone</Label>
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0601020304" />
+            <Input
+              value={phone}
+              onChange={(e) => setPhone(normalizePhone(e.target.value))}
+              placeholder="9 chiffres sans 0 (ex: 612345678)"
+              inputMode="numeric"
+              maxLength={9}
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Email</Label>

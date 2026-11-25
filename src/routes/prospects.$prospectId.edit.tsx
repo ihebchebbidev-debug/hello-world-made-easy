@@ -19,6 +19,7 @@ import { useAuth } from "@/lib/auth";
 import { useOptionList } from "@/lib/useOptionList";
 import { useStatusOptions } from "@/lib/useStatusOptions";
 import { ageFromBirthDate } from "@/lib/age";
+import { normalizePhone } from "@/lib/usePhoneInput";
 import type { Prospect } from "@/lib/types";
 
 export const Route = createFileRoute("/prospects/$prospectId/edit")({
@@ -143,8 +144,8 @@ function EditProspectPage() {
             </div>
             <div className="space-y-1.5"><Label>Nom *</Label><Input value={v("lastName")} onChange={(e) => set("lastName", e.target.value)} /></div>
             <div className="space-y-1.5"><Label>Prénom *</Label><Input value={v("firstName")} onChange={(e) => set("firstName", e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Téléphone (fixe)</Label><Input value={v("phone")} onChange={(e) => set("phone", e.target.value)} /></div>
-            <div className="space-y-1.5"><Label>Mobile / GSM</Label><Input value={v("mobile")} onChange={(e) => set("mobile", e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Téléphone (fixe)</Label><Input value={v("phone")} onChange={(e) => set("phone", normalizePhone(e.target.value))} placeholder="9 chiffres sans 0 (ex: 612345678)" inputMode="numeric" maxLength={9} /></div>
+            <div className="space-y-1.5"><Label>Mobile / GSM</Label><Input value={v("mobile")} onChange={(e) => set("mobile", normalizePhone(e.target.value))} placeholder="9 chiffres sans 0 (ex: 612345678)" inputMode="numeric" maxLength={9} /></div>
             <div className="space-y-1.5"><Label>Email</Label><Input type="email" value={v("email")} onChange={(e) => set("email", e.target.value)} /></div>
             <div className="space-y-1.5 sm:col-span-2 lg:col-span-3"><Label>Adresse</Label><Input value={v("address")} onChange={(e) => set("address", e.target.value)} placeholder="N°, rue, complément…" /></div>
             <div className="space-y-1.5"><Label>Ville</Label><Input value={v("city")} onChange={(e) => set("city", e.target.value.toUpperCase())} /></div>

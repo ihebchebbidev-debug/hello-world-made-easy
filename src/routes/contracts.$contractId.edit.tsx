@@ -18,6 +18,7 @@ import { useAuth } from "@/lib/auth";
 import type { Contract } from "@/lib/types";
 import { useStatusOptions } from "@/lib/useStatusOptions";
 import { useOptionList } from "@/lib/useOptionList";
+import { normalizePhone } from "@/lib/usePhoneInput";
 
 export const Route = createFileRoute("/contracts/$contractId/edit")({
   head: ({ params }) => ({
@@ -187,8 +188,8 @@ function EditContractPage() {
           </Field>
           <Field label="Nom"><Input value={v("lastName")} onChange={(e) => set("lastName", e.target.value)} /></Field>
           <Field label="Prénom" span={2}><Input value={v("firstName")} onChange={(e) => set("firstName", e.target.value)} /></Field>
-          <Field label="Téléphone"><Input value={v("phone")} onChange={(e) => set("phone", e.target.value)} /></Field>
-          <Field label="Mobile"><Input value={v("mobile")} onChange={(e) => set("mobile", e.target.value)} /></Field>
+          <Field label="Téléphone"><Input value={v("phone")} onChange={(e) => set("phone", normalizePhone(e.target.value))} placeholder="9 chiffres sans 0 (ex: 612345678)" inputMode="numeric" maxLength={9} /></Field>
+          <Field label="Mobile"><Input value={v("mobile")} onChange={(e) => set("mobile", normalizePhone(e.target.value))} placeholder="9 chiffres sans 0 (ex: 612345678)" inputMode="numeric" maxLength={9} /></Field>
           <Field label="Email"><Input type="email" value={v("email")} onChange={(e) => set("email", e.target.value)} /></Field>
           <Field label="Date de naissance"><Input type="date" value={v("birthDate")} onChange={(e) => set("birthDate", e.target.value)} /></Field>
         </Section>

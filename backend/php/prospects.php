@@ -525,7 +525,7 @@ if ($method === 'POST') {
                 ':civ' => ($r['civility'] ?? 'M') === 'Mme' ? 'Mme' : 'M',
                 ':ln' => $ln,
                 ':fn' => trim($r['firstName'] ?? ''),
-                ':ph' => trim($r['phone'] ?? ''),
+                ':ph' => clean_phone($r['phone'] ?? null),
                 ':em' => trim($r['email'] ?? ''),
                 ':src' => $r['source'] ?? 'Web',
                 ':st' => $r['status'] ?? 'A recontacter (Voir Commentaire)',
@@ -541,7 +541,7 @@ if ($method === 'POST') {
                 ':cmut' => isset($r['currentMutuelle']) && $r['currentMutuelle'] !== '' ? (string)$r['currentMutuelle'] : null,
                 ':reg' => isset($r['regime']) && $r['regime'] !== '' ? (string)$r['regime'] : null,
                 ':cot' => (isset($r['cotisation']) && $r['cotisation'] !== '' && $r['cotisation'] !== null) ? (float)$r['cotisation'] : null,
-                ':mob' => isset($r['mobile']) && $r['mobile'] !== '' ? trim((string)$r['mobile']) : null,
+                ':mob' => isset($r['mobile']) && $r['mobile'] !== '' ? clean_phone((string)$r['mobile']) : null,
                 ':adr' => isset($r['address']) && $r['address'] !== '' ? trim((string)$r['address']) : '',
                 ':pc'  => isset($r['postalCode']) && $r['postalCode'] !== '' ? trim((string)$r['postalCode']) : '',
                 ':sa'  => (isset($r['spouseAge']) && $r['spouseAge'] !== '' && $r['spouseAge'] !== null) ? (int)$r['spouseAge'] : null,
@@ -655,6 +655,9 @@ if ($method === 'PATCH' || $method === 'PUT') {
                 $val = ($val !== null && preg_match('/^\d{4}-\d{2}-\d{2}$/', (string)$val)) ? (string)$val : null;
             }
             if (($k === 'regime' || $k === 'childrenAges' || $k === 'mobile' || $k === 'address' || $k === 'postalCode' || $k === 'demande') && $val === '') $val = null;
+            // Normalize phone/mobile: strip spaces, remove leading zero, enforce 9 digits
+            if ($k === 'phone')  $val = clean_phone($val);
+            if ($k === 'mobile') $val = clean_phone($val);
             $sets[] = "$col = :$k";
             $params[":$k"] = $val;
         }

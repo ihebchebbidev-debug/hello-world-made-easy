@@ -387,6 +387,8 @@ if ($method === 'PATCH' || $method === 'PUT') {
         }
         if ($col === 'children_count' && $v !== null) $v = (int)$v;
         if ($col === 'city' && is_string($v)) $v = strtoupper(trim($v));
+        // Normalize phone/mobile fields
+        if ($col === 'phone' || $col === 'mobile') $v = clean_phone($v);
         $sets[] = "$col = :ext_$k";
         $params[":ext_$k"] = $v;
     }
@@ -517,8 +519,8 @@ if ($method === 'POST') {
             ':src'  => $r['source'] ?? 'Web',
             ':at'   => $r['assignedTo'] ?? '—',
             ':civ'  => $nullable($r['civility']    ?? null),
-            ':ph'   => $nullable($r['phone']       ?? null),
-            ':mo'   => $nullable($r['mobile']      ?? null),
+            ':ph'   => clean_phone($r['phone']  ?? null),
+            ':mo'   => clean_phone($r['mobile'] ?? null),
             ':em'   => $nullable($r['email']       ?? null),
             ':bd'   => $nullableDate($r['birthDate'] ?? null),
             ':addr' => $nullable($r['address']     ?? null),

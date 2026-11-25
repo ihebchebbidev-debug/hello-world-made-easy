@@ -182,6 +182,9 @@ function rec_payload(array $in, bool $forUpdate = false): array {
     foreach ($map as $k => $max) {
         if (array_key_exists($k, $in)) $p[$k] = rec_clean_str($in[$k], $max);
     }
+    // Normalize phone fields
+    if (array_key_exists('tel_adsl',   $p)) $p['tel_adsl']   = clean_phone($p['tel_adsl'])   ?? $p['tel_adsl'];
+    if (array_key_exists('gsm_client', $p)) $p['gsm_client'] = clean_phone($p['gsm_client']) ?? $p['gsm_client'];
     if (array_key_exists('service',      $in)) $p['service']      = rec_service($in['service']);
     if (array_key_exists('audit_status', $in)) $p['audit_status'] = rec_audit($in['audit_status']);
     if (array_key_exists('priority',     $in)) $p['priority']     = rec_priority($in['priority']);

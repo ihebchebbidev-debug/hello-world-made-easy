@@ -17,6 +17,7 @@ import { CustomFieldsInline } from "@/components/CustomFieldsInline";
 import { useErp } from "@/lib/erpStore";
 import { useAuth } from "@/lib/auth";
 import { useOptionList } from "@/lib/useOptionList";
+import { normalizePhone } from "@/lib/usePhoneInput";
 import type { Contract } from "@/lib/types";
 
 export const Route = createFileRoute("/contracts/new")({
@@ -325,8 +326,8 @@ function NewContractPage() {
           </Field>
           <Field label="Nom"><Input value={lastName} onChange={(e) => setLastName(e.target.value)} /></Field>
           <Field label="Prénom" span={2}><Input value={firstName} onChange={(e) => setFirstName(e.target.value)} /></Field>
-          <Field label="Téléphone"><Input value={phone} onChange={(e) => setPhone(e.target.value)} /></Field>
-          <Field label="Tél mobile"><Input value={mobile} onChange={(e) => setMobile(e.target.value)} /></Field>
+          <Field label="Téléphone"><Input value={phone} onChange={(e) => setPhone(normalizePhone(e.target.value))} placeholder="9 chiffres sans 0 (ex: 612345678)" inputMode="numeric" maxLength={9} /></Field>
+          <Field label="Tél mobile"><Input value={mobile} onChange={(e) => setMobile(normalizePhone(e.target.value))} placeholder="9 chiffres sans 0 (ex: 612345678)" inputMode="numeric" maxLength={9} /></Field>
           <Field label="Email"><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
           <Field label="Date de naissance"><Input type="date" value={birthDate} onChange={(e) => setBirthDate(e.target.value)} /></Field>
         </Section>
